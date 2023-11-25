@@ -9,8 +9,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 468272 25.1    1007727 53.9   660385 35.3
-    ## Vcells 869517  6.7    8388608 64.0  1769630 13.6
+    ## Ncells 468555 25.1    1008535 53.9   660385 35.3
+    ## Vcells 872972  6.7    8388608 64.0  1769630 13.6
 
 ``` r
 library(tidyverse)
@@ -258,7 +258,7 @@ the benchmark fund (The market) and my fund
 
 # Question 3: Portfolio construction
 
-## Loading relevant data and packages
+## Loading relevant data and packages and calling in fucntions
 
 ``` r
 #Relevant data
@@ -269,11 +269,28 @@ Rebalance_days <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Eco
 #relevant packages
 library(rmsfuns)
 pacman::p_load("tidyr", "tbl2xts","devtools","lubridate", "readr", "PerformanceAnalytics", "ggplot2", "dplyr")
+
+#Calling in functions
+library(tidyverse)
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 3/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
 ```
+
+## Introduction
+
+Using the information on the ALSI (J203) and SWIX (J403) Indexes, I will
+be writing a short report where I will be comparing the specific
+methodologies used by the ALSI and the SWIX, evaluating the cumulative
+returns of each and plotting them together to perform a comparisson,
+evaluating which sectors hold the highest weight and contribution for
+each.
 
 ## Lets create an ALSI and SWIX weighted poerfolio cumulative returns
 
-### First lets calculate each indexes weighted daily portfolio returns usinf the safe_returns:
+### First lets calculate each indexes weighted daily portfolio returns using the safe_returns:
+
+In order to use the safe_returns function to calculate the weighted
+portfolio returns I need to convert the data to and xts format. That is
+done below:
 
 ``` r
 #Transforming the data to xts format so we can use safe_returns
@@ -317,8 +334,16 @@ SWIX_port_returns <- rmsfuns::Safe_Return.portfolio(R = Returns_xts, weights = S
 ``` r
 #Merging the ALSI and SWIX weighted portfolio returns
 returns_port_merged <- left_join(ALSI_port_returns, SWIX_port_returns, by= "date")
+#We now have a merged data frame that contains the returns for the weighted ALSI and SWIX portfolios. From here we can do some cool analysis. Which will be done now. 
+```
 
-#Now i need to calculate the cumulative returns 
+Now that we have the merged data frame of portfolio returns for the ALSI
+and SWIX in the correct format, I can move onto calculating the
+cumulative weighted returns.
+
+``` r
+#Now i need to calculate the cumulative returns. Calculating the cumulative returns for each weighted portfolio will  provide a good base to do meaningful comparison.  
+
 
 cumulative_returns_port <- returns_port_merged %>%  arrange(date) %>% 
     
@@ -329,7 +354,7 @@ cumulative_returns_port <- returns_port_merged %>%  arrange(date) %>%
     
     pivot_longer(cols=-date, names_to = "Index", values_to = "Cummulative_port_returns")
 
-#Now I am able to plot the cumulative portfolio returns of the ALSI and SWIX
+
 
 cumulative_returns_port_plot <-    cumulative_returns_port %>%  
        
@@ -353,21 +378,39 @@ cumulative_returns_port_plot <-    cumulative_returns_port %>%
 fmxdat::finplot(cumulative_returns_port_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 year")
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 As can be seen from the above graph, the cumulative returns for the ALSI
 and the SWIX were very similar until 2020, at which point the ALSI began
-outperforming the SWIX.
+outperforming the SWIX. Immediate prior to this separation in cumulative
+returns was a huge draw down for both the ALSI and SWIX weighted
+portfolios. Since this draw down is within 2020, a possible reason could
+be the COVID-19 pandemic. There may have been a switch in weights
+between the two portfolios which would result in varying returns. From
+the graph it is evident that the ALSI reacted better than the SWIX to
+this heavy draw down in 2020.
+
+To further this analysis I will dive into the weighted construction of
+the ALSI and SWIX portfolios, more precisely, I will be analyzing the
+weighted return contribution for each sector and evaluating the
+differences in the ALSI and SWIX.
 
 #### Each sectors weighted return contribution
 
+In this section of code I am grouping by sector to then be able to
+calculate the weighted reuturn contribution of each sector in the
+respective ALSI and SWIX portfolios. I can then evaluate which sectors
+are the main drivers to portfolio returns.
+
 ``` r
+#Creating a data frame that contains weighted portfolio returns for the ALSI and SWIX
 portfolio_returns <- ALSI %>% 
     mutate(J203 = coalesce(J203,0)) %>% 
     mutate(J403 = coalesce(J403,0)) %>% 
     mutate(weighted_ALSI_ret = Return*J203) %>% 
     mutate(weighted_SWIX_ret = Return*J403)
 
+#In this section of code I am grouping by sector to then be able to calculate the weighted reuturn contribution of each sector in the respective ALSI and SWIX portfolios. I can then evaluate which sectors are the main drivers to portfolio returns. 
 portfolio_returns_with_total_sector_weights<-portfolio_returns %>% 
     arrange(date) %>% 
     group_by(date,Sector) %>% 
@@ -393,6 +436,7 @@ ALSI_sector_returns <- portfolio_returns_with_total_sector_weights %>%  select(d
 SWIX_sector_returns <- portfolio_returns_with_total_sector_weights %>%  select(date, Sector ,SWIX_sector_returns) %>%  group_by(Sector) %>%  unique() %>%  
     tbl_xts(cols_to_xts = SWIX_sector_returns, spread_by = Sector)
 
+#Lets make an arbitrary starting amount for our funds. 
 Fund_size_at_start <- 1000 #Setting the starting value for the portfolio 
 
 ALSI_sector_return_division <- 
@@ -426,20 +470,54 @@ SWIX_sector_return_division <-
 
 #### The ALSI’s individual sectors weighted return contribution
 
+Here we are able to evaluate which sector(s) are the main weighted
+return drivers of the ALSI weighted portfolio. From the plot below it is
+evident that for the last 10 years the majority of the return in the
+ALSI weighted portfolio has come from the Industrial sector and the
+lowest coming from the property/residual sectors. However, since 2016
+the industrial sector has slowly started lossing its majority hold to an
+ever rising contribution from the resources sector.
+
+Next we are going to evaluate the same plot but for the SWIX weighted
+portfolio. We will then be able to do identify a possibility of why the
+cumulative returns of the two portfolios differ.
+
 ``` r
 #Lets now plot
  ALSI_sector_return_division$BOP.Weight  %>% .[endpoints(.,'months')] %>% chart.StackedBar()
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-13-1.png) \####
+![](README_files/figure-markdown_github/unnamed-chunk-14-1.png) \####
 The SWIX’s individual sectors weighted return contribution
+
+The plot below evaluates which sector(s) are the main weighted return
+drivers of the SWIX weighted portfolio. Like that of the ALSI, the
+majority holding is found in the industrial sector with again the
+minority held by the the property/residual sectors. The trajectory of
+increased contribution from the resources sector is scene here again as
+was seen in the ALSI portfolio. However, the differences lie in the
+actual value. It is evident that the SWIX weighted portfolio has a more
+even contribution between the financial sector and resources sector.
+Where the ALSI has a higher contribution from the resources sector over
+the financial sector.
 
 ``` r
 #Lets now plot
  SWIX_sector_return_division$BOP.Weight  %>% .[endpoints(.,'months')] %>% chart.StackedBar()
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-14-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-15-1.png) \####
+Comparisson of the ALSI and SWIX portfolio contribution
+
+When evaluating the weighted contributions of the various sectors to the
+ALSI and SWIX portfolios, there are some similarities but also some
+points of difference. Both portfolios have a large contribution from the
+industrial sector. Where the differences play a part is with respect to
+the financial a resources sectors. The ALSI obtains more weight from the
+resource sectors over that of the financial sector, while the SWIX
+obtains more of an even split between the two. This difference may be
+the contributing factor as to why the ALSI performed better than the
+SWIX since 2020.
 
 ## 5% capped portfolio
 
@@ -451,7 +529,23 @@ Evaluate whether funds that perform well in the past attract more
 investors. - Evaluate whether investing in past good performers is a
 good strategy.
 
+# Introduction
+
+This question will provide insight into industry fund flows between
+actively managed funds. More specifically, I will firstly be evaluating
+whether funds that have performed well in the past provides an indicator
+to investors that they will perform well in the future. I will then be
+evaluating whether this is a good investment strategy, to continually
+invest in funds that have performed well in the past. A crucial
+component of this analysis is the look back period, ie) how long must a
+fund perform well before it is indacted as an above average performing
+fund. In this question I will be evaluating a look back period of 3
+years and 10 years.
+
 ## Loading the data and relevant packages
+
+The relevant data that is loaded here contains information on the
+various actively traded funds, along with trading flow data and returns.
 
 ``` r
 #Loading the data 
@@ -467,9 +561,14 @@ library(ggplot2)
 library(tidyr)
 library(lubridate)
 library(knitr)
+library(broom)
 ```
 
 ## Data preperation
+
+To prepare this data for analysis I join the two flows and returns data
+sets, insure that the date is of the correct format and filter out any
+“Fund of Funds” data.
 
 ``` r
 # Merge the datasets
@@ -484,6 +583,13 @@ asisa_data <- filter(asisa_data, FoF == "No")
 
 ### Defining the look-back period and future performance periods
 
+For the first comparison I will be evaluating a look back period of
+three years. This look back period is the shortest of the look back
+periods that will be evaluated. The main takeaway from this analysis is
+as follows; if a fund performs well for a fairly short period of three
+years, does this indicate that the future is bright for the fund and
+will this attract new investment?
+
 ``` r
 # Define look-back and future performance periods
 look_back_years <- 3
@@ -494,7 +600,10 @@ asisa_data <- asisa_data %>%
   mutate(year = year(date))
 ```
 
-### Calculating cumulative returns for the look back period
+### Calculating cumulative returns for the 3 year look back period
+
+The cumulative returns of the 3 year period is calculated so that a
+comparative analysis can be done.
 
 ``` r
 # Calculate cumulative returns for each fund over the look-back period
@@ -511,6 +620,10 @@ cumulative_returns <- cumulative_returns %>%
 ```
 
 ### Analyizing fund flows and future performance
+
+Calculating the future performance (the performance a year after the
+look back period) will provide somewhat of an answer to whether the look
+back period was a good indicating of the following period.
 
 ``` r
 # Merge the rankings back to the main data
@@ -533,6 +646,9 @@ future_performance <- asisa_data %>%
 ```
 
 ### Analyizing data
+
+To analyze the data, a scatter plot, correlation analysis and regression
+analysis will be conducted.
 
 ``` r
 # Combine flow analysis and future performance
@@ -562,14 +678,14 @@ ggplot(combined_analysis, aes(x = cumulative_return, y = future_return, color = 
 
     ## Warning: Removed 119 rows containing missing values (`geom_point()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-22-1.png) As can
+![](README_files/figure-markdown_github/unnamed-chunk-23-1.png) As can
 be seen from the above graph, there does seem to be a positive
 correlation between past cumulative returns and future performance.
 However, not so straight forward, as there are some funds that had a
 poor past cumulative return but had good future returns. Lets do some
 further analysis.
 
-### correlation analysis between cumulative past return(3 years) and total flow
+### correlation analysis between cumulative past returns (3 years) and total flow
 
 ``` r
 # Calculate Pearson's correlation coefficient
@@ -614,12 +730,19 @@ kable(correlation_results_df,
 
 Correlation Analysis Results
 
-### Lets create a linear regression to see if past performance does indicate future performance.
+The above correlation analysis provides some interesting results. The
+output suggests that there is a weak positive relationship between funds
+past 3 years performance and fund flows. Thus, although three years past
+performance may induce some flows towards that fund this pull is not
+relatively strong. Since the p-value is below 0.05 this weak postie
+relationship is not random. Therefore, although there is some truth in
+saying a 3 year strong performing fund will induce more investment.
+there are most probably a lot more factors that goes into the selection
+process of investors when deciding where to allocate there funds.
+
+### Lets create a linear regression to see if 3 years past performance does indicate future performance.
 
 ``` r
-# Assuming combined_analysis has 'cumulative_return' for past performance
-# and 'future_return' for future performance
-
 # Linear Regression
 model <- lm(future_return ~ cumulative_return, data = combined_analysis)
 
@@ -647,6 +770,25 @@ summary(model)
     ## Multiple R-squared:  0.1231, Adjusted R-squared:  0.1221 
     ## F-statistic: 119.2 on 1 and 849 DF,  p-value: < 2.2e-16
 
+``` r
+#Making the model tidy and formating nice
+# Tidy the model summary
+tidy_model <- tidy(model)
+
+# Create a table with knitr::kable
+kable(tidy_model, 
+      caption = "Linear Regression Model Summary", 
+      align = 'c', 
+      digits = 4)
+```
+
+|       term        | estimate | std.error | statistic | p.value |
+|:-----------------:|:--------:|:---------:|:---------:|:-------:|
+|    (Intercept)    |  0.1308  |  0.0069   |  19.0265  |    0    |
+| cumulative_return |  0.1955  |  0.0179   |  10.9190  |    0    |
+
+Linear Regression Model Summary
+
 This regression analysis shows that there is a statistically significant
 relationship between past return values and future return values. Thus
 funds with higher past returns tend to have higher future returns.
@@ -654,7 +796,232 @@ However the R-squared value is fairly low at 0.12 which suggests that
 past performance only explain 12% of the variation in future
 performance. Thus although past performance does have a statistically
 significant positive relationship with future performance, this
-relationship is fairly week and should not be soley relied upon.
+relationship is fairly week and should not be solely relied upon.
+
+## Lets evaluate the 10 year look back period
+
+``` r
+# Define look-back and future performance periods
+look_back_years_10 <- 10
+future_performance_years <- 1
+
+# Create year column for easier calculations
+asisa_data <- asisa_data %>%
+  mutate(year = year(date))
+```
+
+### Calculating cumulative returns for the 10 year look back period
+
+The cumulative returns of the 10 year period is calculated so that a
+comparative analysis can be done.
+
+``` r
+# Calculate cumulative returns for each fund over the look-back period
+cumulative_returns_10 <- asisa_data %>%
+  group_by(Fund) %>%
+  filter(year >= max(year) - look_back_years_10) %>%
+  summarize(cumulative_return_10 = prod(1 + Returns) - 1) %>%
+  ungroup()
+
+# Rank funds based on these returns
+cumulative_returns_10 <- cumulative_returns_10 %>%
+  arrange(desc(cumulative_return_10)) %>%
+  mutate(rank = row_number())
+```
+
+### Analyizing fund flows and future performance
+
+Calculating the future performance (the performance a year after the
+look back period) will provide somewhat of an answer to whether the look
+back period was a good indicating of the following period.
+
+``` r
+# Merge the rankings back to the main data
+asisa_data <- asisa_data %>%
+  left_join(cumulative_returns_10, by = "Fund")
+
+# Analyze fund flows for the year following the look-back period
+fund_flows_analysis_10 <- asisa_data %>%
+  filter(year == max(year) - look_back_years_10 + future_performance_years) %>%
+  group_by(Fund) %>%
+  summarize(total_flow = sum(Flows))
+
+# Calculate future performance
+future_performance_10 <- asisa_data %>%
+  filter(year >= max(year) - look_back_years_10 + future_performance_years,
+         year < max(year) - look_back_years_10 + future_performance_years + future_performance_years) %>%
+  group_by(Fund) %>%
+  summarize(future_return_10 = prod(1 + Returns) - 1) %>%
+  ungroup()
+```
+
+### Analyizing data
+
+To analyze the data, a scatter plot, correlation analysis and regression
+analysis will be conducted.
+
+``` r
+# Combine flow analysis and future performance
+combined_analysis <- fund_flows_analysis_10 %>%
+  left_join(future_performance_10, by = "Fund") %>%
+  left_join(cumulative_returns_10, by = "Fund")
+```
+
+### Scatter plot illustrating the relationship between past performance and future performance
+
+``` r
+# Create a new variable for coloring
+combined_analysis <- combined_analysis %>%
+  mutate(intensity = cumulative_return_10 + future_return_10)
+
+# Plot with color 
+ggplot(combined_analysis, aes(x = cumulative_return_10, y = future_return_10, color = intensity)) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +  # Adjust colors as needed
+  labs(title = "Past vs Future Performance of Funds",
+       x = "Past Cumulative Return",
+       y = "Future Return",
+       color = "Intensity") +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+
+    ## Warning: Removed 101 rows containing missing values (`geom_point()`).
+
+![](README_files/figure-markdown_github/unnamed-chunk-30-1.png) As can
+be seen from the above figure, there is a far greater variability when
+the look back period is increased to 10 years. More importantly there
+still seems to be a positive relationship between past cumulative
+returns and future returns. However, to identify whether this
+relationship is stronger or weaker at longer look back periods we will
+have to complete a correlation and regression analysis.
+
+### correlation analysis between cumulative past returns (10 years) and total flow
+
+``` r
+# Calculate Pearson's correlation coefficient
+correlation_result_10 <- cor.test(combined_analysis$cumulative_return_10, combined_analysis$total_flow, method = "pearson")
+
+# Print the results
+correlation_result_10
+```
+
+    ## 
+    ##  Pearson's product-moment correlation
+    ## 
+    ## data:  combined_analysis$cumulative_return_10 and combined_analysis$total_flow
+    ## t = 1.7016, df = 400, p-value = 0.08961
+    ## alternative hypothesis: true correlation is not equal to 0
+    ## 95 percent confidence interval:
+    ##  -0.01314346  0.18107861
+    ## sample estimates:
+    ##        cor 
+    ## 0.08477276
+
+``` r
+# Creating a data frame with the new correlation results
+correlation_results_10_df <- data.frame(
+  Statistic = c("Correlation Coefficient", "P-Value", "95% Confidence Interval Lower Bound", "95% Confidence Interval Upper Bound"),
+  Value = c(0.08477276, 0.08961, -0.01314346, 0.18107861)
+)
+
+# Using kable to create a formatted table
+kable(correlation_results_10_df, 
+      col.names = c("Statistic", "Value"), 
+      caption = "Correlation Analysis Results", 
+      align = 'c')
+```
+
+|              Statistic              |   Value    |
+|:-----------------------------------:|:----------:|
+|       Correlation Coefficient       | 0.0847728  |
+|               P-Value               | 0.0896100  |
+| 95% Confidence Interval Lower Bound | -0.0131435 |
+| 95% Confidence Interval Upper Bound | 0.1810786  |
+
+Correlation Analysis Results
+
+Like that of the 3 year look back period the correlation between past
+performance and funds flow is still weakly positive at 0.08. This is
+stronger than that of the three year look back period at 0.07 however it
+is not aas strong as I would have thought. Furthermore, the p-value has
+increased from 0.04 (for the 3 year look back period) to 0.08 which
+suggests that the results are not statistically significant at the 5%
+level. However, these results are still statistically significant at the
+10% level. The main takeaway from this correlation analysis is that by
+increasing the look back period we have not increased the correlation
+between past fund performance and funds flow.
+
+Lets now have a look at the regression analysis for the 10 year look
+back period.
+
+### Lets create a linear regression to see if103 years past performance does indicate future performance.
+
+``` r
+# Linear Regression
+model_10 <- lm(future_return_10 ~ cumulative_return_10, data = combined_analysis)
+
+# Summary of the model
+summary(model_10)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = future_return_10 ~ cumulative_return_10, data = combined_analysis)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.25997 -0.03776 -0.01160  0.01976  0.29579 
+    ## 
+    ## Coefficients:
+    ##                      Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)          0.098435   0.007164  13.741   <2e-16 ***
+    ## cumulative_return_10 0.003000   0.004735   0.634    0.527    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.06966 on 400 degrees of freedom
+    ##   (101 observations deleted due to missingness)
+    ## Multiple R-squared:  0.001002,   Adjusted R-squared:  -0.001495 
+    ## F-statistic: 0.4014 on 1 and 400 DF,  p-value: 0.5267
+
+``` r
+#Making the model tidy and formating nice
+# Tidy the model summary
+tidy_model_10 <- tidy(model_10)
+
+# Create a table with knitr::kable
+kable(tidy_model_10, 
+      caption = "Linear Regression Model Summary", 
+      align = 'c', 
+      digits = 4)
+```
+
+|         term         | estimate | std.error | statistic | p.value |
+|:--------------------:|:--------:|:---------:|:---------:|:-------:|
+|     (Intercept)      |  0.0984  |  0.0072   |  13.7406  | 0.0000  |
+| cumulative_return_10 |  0.0030  |  0.0047   |  0.6335   | 0.5267  |
+
+Linear Regression Model Summary
+
+From the above regression analysis the results provide some intresting
+analysis. Like that of the correlation analysis, the regression analysis
+states that there is a weak insignificant realtionship between past
+cumulative returns and future returns. Thus, even if a fund performs
+well for 10 years, this is not a solid indicator that the fund will
+perform well in the follwoing period. Furthermore, the regression
+analysis provides an extremily low r-squared value that suggests that
+past performance does not hold a significant explantion in the future
+returns of funds.
+
+### Summary
+
+For both the three year and ten year look back periods, past performance
+is not a good indicator at both fund flows and future performance. this
+suggests that when investors are looking to invest their money they look
+at other factors rather than just past performance, which according to
+our analysis is the right approach, as past performance is noot a good
+indicator at futrure performance.
 
 # Question 5
 

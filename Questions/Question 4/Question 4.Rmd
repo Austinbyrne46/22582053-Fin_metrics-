@@ -3,7 +3,7 @@
 # Remove comments and add values where applicable.
 # The descriptions below should be self-explanatory
 
-title: "Helping You Write Academic Papers in R using Texevier"
+title: "Question 4: Flows analysis"
 #subtitle: "This will appear as Right Header"
 
 documentclass: "elsarticle"
@@ -25,23 +25,23 @@ Thesis_FP: FALSE
 # --------- Front Page
 # Comment: ----- Follow this pattern for up to 5 authors
 AddTitle: TRUE # Use FALSE when submitting to peer reviewed platform. This will remove author names.
-Author1: "Jane Doe^[__Contributions:__  \\newline _The authors would like to thank no institution for money donated to this project. Thank you sincerely._]"  # First Author - note the thanks message displayed as an italic footnote of first page.
-Ref1: "Some Institution, Cape Town, South Africa" # First Author's Affiliation
-Email1: "nfkatzke\\@gmail.com" # First Author's Email address
+Author1: "Austin Byrne"  # First Author - note the thanks message displayed as an italic footnote of first page.
+Ref1: "The best quantitative analyst ever seen, Stellenbosh" # First Author's Affiliation
+Email1: "22582053\\@sun.ac.za" # First Author's Email address
 
-Author2: "John Smith"
-Ref2: "Some other Institution, Cape Town, South Africa"
-Email2: "John\\@gmail.com"
-CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
+#Author2: "John Smith"
+#Ref2: "Some other Institution, Cape Town, South Africa"
+#Email2: "John\\@gmail.com"
+#CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
 
-Author3: "John Doe"
-Email3: "Joe\\@gmail.com"
+#Author3: "John Doe"
+#Email3: "Joe\\@gmail.com"
 
-CorrespAuthor_1: TRUE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
+#CorrespAuthor_1: TRUE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
 
 # Comment out below to remove both. JEL Codes only given if keywords also given.
-keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
-JELCodes: "L250 \\sep L100"
+#keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
+#JELCodes: "L250 \\sep L100"
 
 # ----- Manage headers and footers:
 #BottomLFooter: $Title$
@@ -92,7 +92,8 @@ output:
     fig_width: 3.5 # Adjust default figure sizes. This can also be done in the chunks of the text.
     fig_height: 3.5
 abstract: |
-  Abstract to be written here. The abstract should not be too long and should provide the reader with a good understanding what you are writing about. Academic papers are not like novels where you keep the reader in suspense. To be effective in getting others to read your paper, be as open and concise about your findings here as possible. Ideally, upon reading your abstract, the reader should feel he / she must read your paper in entirety.
+  In this question I evaluate whether past performance of a fund is a good indicator of future performance and whther this pushes active investors to invest in the high performing funds solely on past  performance. In this question I evaluate two look back periods, one on the shorter spectrum being 3 years and another on the longer being 10 years. I draw up scatter plots and run correlation and regression analysis to perform my analysis. 
+
 ---
 
 <!-- First: Set your default preferences for chunk options: -->
@@ -117,6 +118,342 @@ library(tidyverse)
 <!-- ############################## -->
 
 # Introduction \label{Introduction}
+
+This question will provide insight into industry fund flows between actively managed funds. More specifically, I will firstly be evaluating whether funds that have performed well in the past provides an indicator to investors that they will perform well in the future. I will then be evaluating whether this is a good investment strategy, to continually invest in funds that have performed well in the past. A crucial component of this analysis is the look back period, ie) how long must a fund perform well before it is indacted as an above average performing fund. In this question I will be evaluating a look back period of 3 years and 10 years. 
+
+## Loading the data and relevant packages
+
+The relevant data that is loaded here contains information on the various actively traded funds, along with trading flow data and returns. 
+
+```{r}
+#Loading the data 
+ASISA_Flows <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/ASISA_Flows.rds")
+
+ASISA_Rets <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/ASISA_Rets.rds")
+
+#Loading the relevant packages 
+#install.packages("ggridges")
+library(ggridges)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(lubridate)
+library(knitr)
+library(broom)
+
+
+```
+
+## Data preperation 
+
+To prepare this data for analysis I join the two flows and returns data sets, insure that the date is of the correct format and filter out any "Fund of Funds" data. 
+
+```{r}
+# Merge the datasets
+asisa_data <- left_join(ASISA_Flows, ASISA_Rets, by = c("date", "Fund", "Index", "FoF"))
+
+# Ensure date columns are in Date format
+asisa_data$date <- as.Date(asisa_data$date)
+
+# Filter out Fund of Funds 
+asisa_data <- filter(asisa_data, FoF == "No")
+
+```
+
+## Defining the look-back period and future performance periods 
+
+For the first comparison I will be evaluating a look back period of three years. This look back period is the shortest of the look back periods that will be evaluated. The main takeaway from this analysis is as follows; if a fund performs well for a fairly short period of three years, does this indicate that the future is bright for the fund and will this attract new investment? 
+
+```{r}
+# Define look-back and future performance periods
+look_back_years <- 3
+future_performance_years <- 1
+
+# Create year column for easier calculations
+asisa_data <- asisa_data %>%
+  mutate(year = year(date))
+
+```
+
+## Calculating cumulative returns for the 3 year look back period
+
+The cumulative returns of the 3 year period is calculated so that a comparative analysis can be done. 
+
+```{r}
+# Calculate cumulative returns for each fund over the look-back period
+cumulative_returns <- asisa_data %>%
+  group_by(Fund) %>%
+  filter(year >= max(year) - look_back_years) %>%
+  summarize(cumulative_return = prod(1 + Returns) - 1) %>%
+  ungroup()
+
+# Rank funds based on these returns
+cumulative_returns <- cumulative_returns %>%
+  arrange(desc(cumulative_return)) %>%
+  mutate(rank = row_number())
+
+```
+
+## Analyizing fund flows and future performance
+
+Calculating the future performance (the performance a year after the look back period) will provide somewhat of an answer to whether the look back period was a good indicating of the following period. 
+
+```{r}
+# Merge the rankings back to the main data
+asisa_data <- asisa_data %>%
+  left_join(cumulative_returns, by = "Fund")
+
+# Analyze fund flows for the year following the look-back period
+fund_flows_analysis <- asisa_data %>%
+  filter(year == max(year) - look_back_years + future_performance_years) %>%
+  group_by(Fund) %>%
+  summarize(total_flow = sum(Flows))
+
+# Calculate future performance
+future_performance <- asisa_data %>%
+  filter(year >= max(year) - look_back_years + future_performance_years,
+         year < max(year) - look_back_years + future_performance_years + future_performance_years) %>%
+  group_by(Fund) %>%
+  summarize(future_return = prod(1 + Returns) - 1) %>%
+  ungroup()
+
+```
+
+
+## Analyizing data 
+
+To analyze the data, a scatter plot, correlation analysis and regression analysis will be conducted. 
+
+```{r}
+# Combine flow analysis and future performance
+combined_analysis <- fund_flows_analysis %>%
+  left_join(future_performance, by = "Fund") %>%
+  left_join(cumulative_returns, by = "Fund")
+
+
+
+```
+
+### Scatter plot illustrating the relationship between past performance and future performance
+
+```{r Figure 1, warning =  FALSE, fig.align = 'center', fig.cap = "3 year look back scatter plot \\label{Figure1}", fig.height = 6, fig.width = 6, dev = 'png'}
+
+# Create a new variable for coloring
+combined_analysis <- combined_analysis %>%
+  mutate(intensity = cumulative_return + future_return)
+
+# Plot with color 
+ggplot(combined_analysis, aes(x = cumulative_return, y = future_return, color = intensity)) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +  # Adjust colors as needed
+  labs(title = "Past vs Future Performance of Funds",
+       x = "Past Cumulative Return",
+       y = "Future Return",
+       color = "Intensity") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+
+```
+
+As can be seen from the above graph, there does seem to be a positive correlation between past cumulative returns and future performance. However, not so straight forward, as there are some funds that had a poor past cumulative return but had good future returns. Lets do some further analysis. 
+
+### correlation analysis between cumulative past returns (3 years) and total flow
+
+```{r}
+# Calculate Pearson's correlation coefficient
+correlation_result <- cor.test(combined_analysis$cumulative_return, combined_analysis$total_flow, method = "pearson")
+
+# Print the results
+correlation_result
+
+#Creating a nice table for the above results 
+correlation_results_df <- data.frame(
+  Statistic = c("Correlation Coefficient", "P-Value", "95% Confidence Interval Lower Bound", "95% Confidence Interval Upper Bound"),
+  Value = c(0.06977338, 0.04186, 0.002581492, 0.136338075)
+)
+
+
+kable(correlation_results_df, 
+      col.names = c("Statistic", "Value"), 
+      caption = "Correlation Analysis Results", 
+      align = 'c')
+```
+
+The above correlation analysis provides some interesting results. The output suggests that there is a weak positive relationship between funds past 3 years performance and fund flows. Thus, although three years past performance may induce some flows towards that fund this pull is not relatively strong. Since the p-value is below 0.05 this weak postie relationship is not random. Therefore, although there is some truth in saying a 3 year strong performing fund will induce more investment. there are most probably a lot more factors that goes into the selection process of investors when deciding where to allocate there funds. 
+
+
+## Lets create a linear regression to see if 3 years past performance does indicate future performance. 
+
+```{r}
+# Linear Regression
+model <- lm(future_return ~ cumulative_return, data = combined_analysis)
+
+# Summary of the model
+summary(model)
+
+#Making the model tidy and formating nice
+# Tidy the model summary
+tidy_model <- tidy(model)
+
+# Create a table with knitr::kable
+kable(tidy_model, 
+      caption = "Linear Regression Model Summary", 
+      align = 'c', 
+      digits = 4)
+
+```
+
+This regression analysis shows that there is a statistically significant relationship between past return values and future return values. Thus funds with higher past returns tend to have higher future returns. However the R-squared value is fairly low at 0.12 which suggests that past performance only explain 12% of the variation in future performance. Thus although past performance does have a statistically significant positive relationship with future performance, this relationship is fairly week and should not be solely relied upon.
+
+## Lets evaluate the 10 year look back period 
+
+```{r}
+# Define look-back and future performance periods
+look_back_years_10 <- 10
+future_performance_years <- 1
+
+# Create year column for easier calculations
+asisa_data <- asisa_data %>%
+  mutate(year = year(date))
+```
+
+### Calculating cumulative returns for the 10 year look back period
+
+The cumulative returns of the 10 year period is calculated so that a comparative analysis can be done. 
+
+```{r}
+# Calculate cumulative returns for each fund over the look-back period
+cumulative_returns_10 <- asisa_data %>%
+  group_by(Fund) %>%
+  filter(year >= max(year) - look_back_years_10) %>%
+  summarize(cumulative_return_10 = prod(1 + Returns) - 1) %>%
+  ungroup()
+
+# Rank funds based on these returns
+cumulative_returns_10 <- cumulative_returns_10 %>%
+  arrange(desc(cumulative_return_10)) %>%
+  mutate(rank = row_number())
+
+```
+
+
+### Analyizing fund flows and future performance
+
+Calculating the future performance (the performance a year after the look back period) will provide somewhat of an answer to whether the look back period was a good indicating of the following period. 
+
+```{r}
+# Merge the rankings back to the main data
+asisa_data <- asisa_data %>%
+  left_join(cumulative_returns_10, by = "Fund")
+
+# Analyze fund flows for the year following the look-back period
+fund_flows_analysis_10 <- asisa_data %>%
+  filter(year == max(year) - look_back_years_10 + future_performance_years) %>%
+  group_by(Fund) %>%
+  summarize(total_flow = sum(Flows))
+
+# Calculate future performance
+future_performance_10 <- asisa_data %>%
+  filter(year >= max(year) - look_back_years_10 + future_performance_years,
+         year < max(year) - look_back_years_10 + future_performance_years + future_performance_years) %>%
+  group_by(Fund) %>%
+  summarize(future_return_10 = prod(1 + Returns) - 1) %>%
+  ungroup()
+
+```
+
+### Analyizing data 
+
+To analyze the data, a scatter plot, correlation analysis and regression analysis will be conducted. 
+
+```{r}
+# Combine flow analysis and future performance
+combined_analysis <- fund_flows_analysis_10 %>%
+  left_join(future_performance_10, by = "Fund") %>%
+  left_join(cumulative_returns_10, by = "Fund")
+```
+
+### Scatter plot illustrating the relationship between past performance and future performance
+
+```{r Figure 2, warning =  FALSE, fig.align = 'center', fig.cap = "10 year look back scatter plot \\label{Figure2}", fig.height = 6, fig.width = 6, dev = 'png'}
+
+# Create a new variable for coloring
+combined_analysis <- combined_analysis %>%
+  mutate(intensity = cumulative_return_10 + future_return_10)
+
+# Plot with color 
+ggplot(combined_analysis, aes(x = cumulative_return_10, y = future_return_10, color = intensity)) +
+  geom_point() +
+  scale_color_gradient(low = "blue", high = "red") +  # Adjust colors as needed
+  labs(title = "Past vs Future Performance of Funds",
+       x = "Past Cumulative Return",
+       y = "Future Return",
+       color = "Intensity") +
+  theme_minimal() +
+  theme(legend.position = "right")
+
+
+```
+
+As can be seen from the above figure, there is a far greater variability when the look back period is increased to 10 years. More importantly there still seems to be a positive relationship between past cumulative returns and future returns. However, to identify whether this relationship is stronger or weaker at longer look back periods we will have to complete a correlation and regression analysis. 
+
+### correlation analysis between cumulative past returns (10 years) and total flow
+
+```{r}
+# Calculate Pearson's correlation coefficient
+correlation_result_10 <- cor.test(combined_analysis$cumulative_return_10, combined_analysis$total_flow, method = "pearson")
+
+# Print the results
+correlation_result_10
+
+# Creating a data frame with the new correlation results
+correlation_results_10_df <- data.frame(
+  Statistic = c("Correlation Coefficient", "P-Value", "95% Confidence Interval Lower Bound", "95% Confidence Interval Upper Bound"),
+  Value = c(0.08477276, 0.08961, -0.01314346, 0.18107861)
+)
+
+# Using kable to create a formatted table
+kable(correlation_results_10_df, 
+      col.names = c("Statistic", "Value"), 
+      caption = "Correlation Analysis Results", 
+      align = 'c')
+
+```
+
+Like that of the 3 year look back period the correlation between past performance and funds flow is still weakly positive at 0.08. This is stronger than that of the three year look back period at 0.07 however it is not aas strong as I would have thought. Furthermore, the p-value has increased from 0.04 (for the 3 year look back period) to 0.08 which suggests that the results are not statistically significant at the 5% level. However, these results are still statistically significant at the 10% level. The main takeaway from this correlation analysis is that by increasing the look back period we have not increased the correlation between past fund performance and funds flow. 
+
+Lets now have a look at the regression analysis for the 10 year look back period. 
+
+
+### Lets create a linear regression to see if103 years past performance does indicate future performance. 
+
+```{r}
+# Linear Regression
+model_10 <- lm(future_return_10 ~ cumulative_return_10, data = combined_analysis)
+
+# Summary of the model
+summary(model_10)
+
+#Making the model tidy and formating nice
+# Tidy the model summary
+tidy_model_10 <- tidy(model_10)
+
+# Create a table with knitr::kable
+kable(tidy_model_10, 
+      caption = "Linear Regression Model Summary", 
+      align = 'c', 
+      digits = 4)
+
+```
+
+From the above regression analysis the results provide some intresting analysis. Like that of the correlation analysis, the regression analysis states that there is a weak insignificant realtionship between past cumulative returns and future returns. Thus, even if a fund performs well for 10 years, this is not a solid indicator that the fund will perform well in the follwoing period. Furthermore, the regression analysis provides an extremily low r-squared value that suggests that past performance does not hold a significant explantion in the future returns of funds. 
+
+### Summary 
+
+For both the three year and ten year look back periods, past performance is not a good indicator at both fund flows and future performance. this suggests that when investors are looking to invest their money they look at other factors rather than just past performance, which according to our analysis is the right approach, as past performance is noot a good indicator at futrure performance. 
+
+
 
 
 
