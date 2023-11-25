@@ -3,7 +3,7 @@
 # Remove comments and add values where applicable.
 # The descriptions below should be self-explanatory
 
-title: "Helping You Write Academic Papers in R using Texevier"
+title: "Question 3: Portfolio construction and comparison"
 #subtitle: "This will appear as Right Header"
 
 documentclass: "elsarticle"
@@ -25,23 +25,23 @@ Thesis_FP: FALSE
 # --------- Front Page
 # Comment: ----- Follow this pattern for up to 5 authors
 AddTitle: TRUE # Use FALSE when submitting to peer reviewed platform. This will remove author names.
-Author1: "Jane Doe^[__Contributions:__  \\newline _The authors would like to thank no institution for money donated to this project. Thank you sincerely._]"  # First Author - note the thanks message displayed as an italic footnote of first page.
-Ref1: "Some Institution, Cape Town, South Africa" # First Author's Affiliation
-Email1: "nfkatzke\\@gmail.com" # First Author's Email address
+Author1: "Austin Byrne"  # First Author - note the thanks message displayed as an italic footnote of first page.
+Ref1: "Stellenbosch University, Stellenbosch, South Africa" # First Author's Affiliation
+Email1: "22582053\\@sun.ac.za" # First Author's Email address
 
-Author2: "John Smith"
-Ref2: "Some other Institution, Cape Town, South Africa"
-Email2: "John\\@gmail.com"
-CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
+#Author2: "John Smith"
+#Ref2: "Some other Institution, Cape Town, South Africa"
+#Email2: "John\\@gmail.com"
+#CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
 
-Author3: "John Doe"
-Email3: "Joe\\@gmail.com"
+#Author3: "John Doe"
+#Email3: "Joe\\@gmail.com"
 
 CorrespAuthor_1: TRUE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
 
 # Comment out below to remove both. JEL Codes only given if keywords also given.
-keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
-JELCodes: "L250 \\sep L100"
+#keywords: "Portfolio analysis \\ALSI \\SWIX" # Use \\sep to separate
+#JELCodes: "L250 \\sep L100"
 
 # ----- Manage headers and footers:
 #BottomLFooter: $Title$
@@ -92,7 +92,7 @@ output:
     fig_width: 3.5 # Adjust default figure sizes. This can also be done in the chunks of the text.
     fig_height: 3.5
 abstract: |
-  Abstract to be written here. The abstract should not be too long and should provide the reader with a good understanding what you are writing about. Academic papers are not like novels where you keep the reader in suspense. To be effective in getting others to read your paper, be as open and concise about your findings here as possible. Ideally, upon reading your abstract, the reader should feel he / she must read your paper in entirety.
+  The purpose of this question is to construct a portfolio analysis on the weighted ALSI and weighted SWIX portfolios. In this question I will plot the cumulative returns of both portfolios and evaluate the comparisons and differences. Furthermore, a breakdown of the various weighted contributions of each sector within each weighted portfolio will be analysed. 
 ---
 
 <!-- First: Set your default preferences for chunk options: -->
@@ -108,6 +108,11 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, fig.width 
 # Lets load in example data, and see how this can be stored and later called from your 'data' folder.
 if(!require("tidyverse")) install.packages("tidyverse")
 library(tidyverse)
+Example_data <- Texevier::Ex_Dat
+
+# Notice that as you are working in a .Rproj file (I am assuming you are) - the relative paths of your directories start at your specified root.
+# This means that when working in a .Rproj file, you never need to use getwd() - it is assumed as your base root automatically.
+write_rds(Example_data, path = "data/Example_data.rds")
 
 ```
 
@@ -118,7 +123,197 @@ library(tidyverse)
 
 # Introduction \label{Introduction}
 
+Using the information on the ALSI (J203) and SWIX (J403) Indexes, I will be writing a short report where I will be comparing the specific methodologies used by the ALSI and the SWIX, evaluating the cumulative returns of each and plotting them together to perform a comparison, evaluating which sectors hold the highest weight and contribution for each. 
 
+# Loading relevant data and packages 
+
+The data used is data based on the ALSI and SWIX. The data contains dates, weights and returns for each. 
+
+```{r}
+#Relevant data
+ALSI <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/ALSI.rds")
+
+Rebalance_days <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/Rebalance_days.rds")
+
+#relevant packages
+library(rmsfuns)
+pacman::p_load("tidyr", "tbl2xts","devtools","lubridate", "readr", "PerformanceAnalytics", "ggplot2", "dplyr")
+```
+
+# Lets create an ALSI and SWIX weighted poerfolio cumulative returns 
+
+## First lets calculate each indexes weighted daily portfolio returns using the safe_returns:
+
+In order to use the safe_returns function to calculate the weighted portfolio returns I need to convert the data to and xts format. That is done below: 
+
+```{r}
+#Transforming the data to xts format so we can use safe_returns
+ALSI_weights_xts <- ALSI %>% 
+    select(date, Tickers, J203) %>% 
+    tbl_xts(cols_to_xts = J203, spread_by = Tickers)
+
+SWIX_weights_xts <- ALSI %>% 
+    select(date, Tickers, J403) %>% 
+    tbl_xts(cols_to_xts = J403, spread_by = Tickers)
+
+Returns_xts <- ALSI %>% 
+    select(date, Tickers, Return) %>% 
+    tbl_xts(cols_to_xts = Return, spread_by = Tickers)
+
+#Making sure that all NA's are set to 0 
+
+ALSI_weights_xts[is.na(ALSI_weights_xts)] <- 0
+SWIX_weights_xts[is.na(SWIX_weights_xts)] <- 0
+Returns_xts[is.na(Returns_xts)] <- 0
+
+#Now using the safe returns I calculate the weighted portfolio returns for the ALSI. 
+ALSI_port_returns <- rmsfuns::Safe_Return.portfolio(R = Returns_xts, weights = ALSI_weights_xts, lag_weights = T) %>%  
+    xts_tbl() %>%  rename(ALSI_port_returns = portfolio.returns)
+
+#Now using the safe returns I calculate the weighted portfolio returns for the SWIX.
+SWIX_port_returns <- rmsfuns::Safe_Return.portfolio(R = Returns_xts, weights = SWIX_weights_xts, lag_weights = T) %>%  
+    xts_tbl() %>%  rename(SWIX_port_returns = portfolio.returns)
+
+#Merging the ALSI and SWIX weighted portfolio returns
+returns_port_merged <- left_join(ALSI_port_returns, SWIX_port_returns, by= "date")
+#We now have a merged data frame that contains the returns for the weighted ALSI and SWIX portfolios. From here we can do some cool analysis. Which will be done now. 
+```
+
+Now that we have the merged data frame of portfolio returns for the ALSI and SWIX in the correct format, I can move onto calculating the cumulative weighted returns. 
+
+```{r}
+#Now i need to calculate the cumulative returns. Calculating the cumulative returns for each weighted portfolio will  provide a good base to do meaningful comparison.  
+
+
+cumulative_returns_port <- returns_port_merged %>%  arrange(date) %>% 
+    
+    mutate(across(.cols = -date, .fns = ~cumprod(1 + .))) %>% 
+    
+    mutate(across(.cols = -date, .fns = ~./first(.))) %>% 
+    # Start at 1
+    
+    pivot_longer(cols=-date, names_to = "Index", values_to = "Cummulative_port_returns")
+
+
+
+cumulative_returns_port_plot <-    cumulative_returns_port %>%  
+       
+       ggplot() + 
+  
+  geom_line(aes(date, Cummulative_port_returns , color = Index), size = 0.5, alpha = 0.8) +
+  
+   fmxdat::theme_fmx(title.size = fmxdat::ggpts(25), 
+                    subtitle.size = fmxdat::ggpts(0),
+                    caption.size = fmxdat::ggpts(20),
+                    CustomCaption = T) + 
+    
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "", y = "Percentage(%)", caption = "Note:\nCalculation own",
+       title = "Cumulative Returns of ALSI and SWIX Indexes",
+       subtitle = "")
+```
+
+## Cumulative returns plot
+
+```{r Figure 1, warning =  FALSE, fig.align = 'center', fig.cap = "Cumulative returns plot \\label{Figure1}", fig.height = 6, fig.width = 6, dev = 'png'}
+# Finplot for finishing touches:
+
+fmxdat::finplot(cumulative_returns_port_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 year")
+```
+
+As can be seen from the above graph, the cumulative returns for the ALSI and the SWIX were very similar until 2020, at which point the ALSI began outperforming the SWIX. Immediate prior to this separation in cumulative returns was a huge draw down for both the ALSI and SWIX weighted portfolios. Since this draw down is within 2020, a possible reason could be the COVID-19 pandemic. There may have been a switch in weights between the two portfolios which would result in varying returns. From the graph it is evident that the ALSI reacted better than the SWIX to this heavy draw down in 2020. 
+
+To further this analysis I will dive into the weighted construction of the ALSI and SWIX portfolios, more precisely, I will be analyzing the weighted return contribution for each sector and evaluating the differences in the ALSI and SWIX. 
+
+## Each sectors weighted return contribution
+
+In this section of code I am grouping by sector to then be able to calculate the weighted reuturn contribution of each sector in the respective ALSI and SWIX portfolios. I can then evaluate which sectors are the main drivers to portfolio returns.
+
+```{r}
+#Creating a data frame that contains weighted portfolio returns for the ALSI and SWIX
+portfolio_returns <- ALSI %>% 
+    mutate(J203 = coalesce(J203,0)) %>% 
+    mutate(J403 = coalesce(J403,0)) %>% 
+    mutate(weighted_ALSI_ret = Return*J203) %>% 
+    mutate(weighted_SWIX_ret = Return*J403)
+
+#In this section of code I am grouping by sector to then be able to calculate the weighted reuturn contribution of each sector in the respective ALSI and SWIX portfolios. I can then evaluate which sectors are the main drivers to portfolio returns. 
+portfolio_returns_with_total_sector_weights<-portfolio_returns %>% 
+    arrange(date) %>% 
+    group_by(date,Sector) %>% 
+    mutate(ALSI_sector_weight = coalesce(J203,0)) %>% 
+    mutate(SWIX_sector_weight = coalesce(J403,0)) %>% 
+    mutate(ALSI_sector_returns = sum(weighted_ALSI_ret,na.rm = T)) %>% 
+    mutate(total_ALSI_sector_weight = sum(J203, na.rm=T)) %>% 
+    mutate(SWIX_sector_returns = sum(weighted_SWIX_ret, na.rm = T)) %>% 
+    mutate(total_SWIX_sector_weight = sum(J403, na.rm=T)) %>% 
+    ungroup()
+
+#Transforming the sector weights data to xts to make use of the performance analytics package 
+total_ALSI_sector_weight <-  portfolio_returns_with_total_sector_weights %>%  select(date, Sector ,total_ALSI_sector_weight) %>%  group_by(Sector) %>%  unique() %>%  
+    tbl_xts(cols_to_xts = total_ALSI_sector_weight, spread_by = Sector)
+
+total_SWIX_sector_weight <-  portfolio_returns_with_total_sector_weights %>%  select(date, Sector ,total_SWIX_sector_weight) %>%  group_by(Sector) %>%  unique() %>%  
+    tbl_xts(cols_to_xts = total_SWIX_sector_weight, spread_by = Sector)
+
+#Transforming the sectors returns to xts data so that we can make use of the performance analytics package
+ALSI_sector_returns <- portfolio_returns_with_total_sector_weights %>%  select(date, Sector ,ALSI_sector_returns) %>%  group_by(Sector) %>%  unique() %>%  
+    tbl_xts(cols_to_xts = ALSI_sector_returns, spread_by = Sector)
+
+SWIX_sector_returns <- portfolio_returns_with_total_sector_weights %>%  select(date, Sector ,SWIX_sector_returns) %>%  group_by(Sector) %>%  unique() %>%  
+    tbl_xts(cols_to_xts = SWIX_sector_returns, spread_by = Sector)
+
+#Lets make an arbitrary starting amount for our funds. 
+Fund_size_at_start <- 1000 #Setting the starting value for the portfolio 
+
+ALSI_sector_return_division <- 
+      rmsfuns::Safe_Return.portfolio(ALSI_sector_returns, 
+                                     
+                       weights = total_ALSI_sector_weight, lag_weights = TRUE,
+                       
+                       verbose = TRUE, contribution = TRUE, 
+                       
+                       value = Fund_size_at_start, geometric = TRUE) 
+
+SWIX_sector_return_division <- 
+      rmsfuns::Safe_Return.portfolio(SWIX_sector_returns, 
+                                     
+                       weights = total_SWIX_sector_weight, lag_weights = TRUE,
+                       
+                       verbose = TRUE, contribution = TRUE, 
+                       
+                       value = Fund_size_at_start, geometric = TRUE) 
+
+```
+
+## The ALSI's individual sectors weighted return contribution
+
+Here we are able to evaluate which sector(s) are the main weighted return drivers of the ALSI weighted portfolio. From the plot below it is evident that for the last 10 years the majority of the return in the ALSI weighted portfolio has come from the Industrial sector and the lowest coming from the property/residual sectors. However, since 2016 the industrial sector has slowly started lossing its majority hold to an ever rising contribution from the resources sector. 
+
+Next we are going to evaluate the same plot but for the SWIX weighted portfolio. We will then be able to do identify a possibility of why the cumulative returns of the two portfolios differ. 
+
+```{r Figure 2, warning =  FALSE, fig.align = 'center', fig.cap = "ALSI sector contribution plot \\label{Figure2}", fig.height = 6, fig.width = 6, dev = 'png'}
+#Lets now plot
+ ALSI_sector_return_division$BOP.Weight  %>% .[endpoints(.,'months')] %>% chart.StackedBar()
+```
+
+## The SWIX's individual sectors weighted return contribution
+
+The plot below evaluates which sector(s) are the main weighted return drivers of the SWIX weighted portfolio. Like that of the ALSI, the majority holding is found in the industrial sector with again the minority held by the the property/residual sectors. The trajectory of increased contribution from the resources sector is scene here again as was seen in the ALSI portfolio. However, the differences lie in the actual value. It is evident that the SWIX weighted portfolio has a more even contribution between the financial sector and resources sector. Where the ALSI has a higher contribution from the resources sector over the financial sector.  
+
+```{r Figure 3, warning =  FALSE, fig.align = 'center', fig.cap = "SWIX sector contribution plot \\label{Figure3}", fig.height = 6, fig.width = 6, dev = 'png'}
+
+#Lets now plot
+ SWIX_sector_return_division$BOP.Weight  %>% .[endpoints(.,'months')] %>% chart.StackedBar()
+```
+
+## Comparisson of the ALSI and SWIX portfolio contribution
+
+When evaluating the weighted contributions of the various sectors to the ALSI and SWIX portfolios, there are some similarities but also some points of difference. Both portfolios have a large contribution from the industrial sector. Where the differences play a part is with respect to the financial a resources sectors. The ALSI obtains more weight from the resource sectors over that of the financial sector, while the SWIX obtains more of an even split between the two. This difference may be the contributing factor as to why the ALSI performed better than the SWIX since 2020. 
+
+<!-- Make title of bibliography here: -->
+<!-- \newpage -->
 
 \newpage
 
