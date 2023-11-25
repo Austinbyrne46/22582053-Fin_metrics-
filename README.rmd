@@ -1,0 +1,70 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# Purpose
+
+This is the final README, it is a compilation of questions one through seven. 
+
+
+```{r}
+
+rm(list = ls()) # Clean your environment:
+gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+library(tidyverse)
+list.files('code/', full.names = T, recursive = T) %>% .[grepl('.R', .)] %>% as.list() %>% walk(~source(.))
+```
+
+```{r setup, eval=FALSE}
+#Loading all relevant packages. 
+#install.packages("pacman")
+pacman::p_load(tidyverse)
+pacman::p_load(readxl)
+pacman::p_load(readr)
+pacman::p_load(ggplot2)
+pacman::p_load(gt)
+library(gt)
+library(tidyverse)
+```
+
+
+```{r}
+#Loading all relevant code from each questions code folder. 
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 1/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 2/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 3/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 4/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 5/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 6/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/Question 7/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+```
+
+# Question 1
+
+```{r}
+#Loading relevent data for question 1
+
+```
+
+
+
+# Question 2
+
+
+# Question 3 
+
+
+# Question 4
+
+
+# Question 5 
+
+
+
+
+# Question 6 
+
+
+# Question 7
