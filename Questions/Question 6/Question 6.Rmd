@@ -3,7 +3,7 @@
 # Remove comments and add values where applicable.
 # The descriptions below should be self-explanatory
 
-title: "Helping You Write Academic Papers in R using Texevier"
+title: "Question 6: Portfolio Construction"
 #subtitle: "This will appear as Right Header"
 
 documentclass: "elsarticle"
@@ -25,23 +25,23 @@ Thesis_FP: FALSE
 # --------- Front Page
 # Comment: ----- Follow this pattern for up to 5 authors
 AddTitle: TRUE # Use FALSE when submitting to peer reviewed platform. This will remove author names.
-Author1: "Jane Doe^[__Contributions:__  \\newline _The authors would like to thank no institution for money donated to this project. Thank you sincerely._]"  # First Author - note the thanks message displayed as an italic footnote of first page.
-Ref1: "Some Institution, Cape Town, South Africa" # First Author's Affiliation
-Email1: "nfkatzke\\@gmail.com" # First Author's Email address
+Author1: "Austin Byrne"  # First Author - note the thanks message displayed as an italic footnote of first page.
+#Ref1: "Some Institution, Cape Town, South Africa" # First Author's Affiliation
+#Email1: "nfkatzke\\@gmail.com" # First Author's Email address
 
-Author2: "John Smith"
-Ref2: "Some other Institution, Cape Town, South Africa"
-Email2: "John\\@gmail.com"
-CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
+#Author2: "John Smith"
+#Ref2: "Some other Institution, Cape Town, South Africa"
+#Email2: "John\\@gmail.com"
+#CommonAffiliation_12: TRUE # If Author 1 and 2 have a common affiliation. Works with _13, _23, etc.
 
-Author3: "John Doe"
-Email3: "Joe\\@gmail.com"
+#Author3: "John Doe"
+#Email3: "Joe\\@gmail.com"
 
-CorrespAuthor_1: TRUE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
+#CorrespAuthor_1: TRUE  # If corresponding author is author 3, e.g., use CorrespAuthor_3: TRUE
 
 # Comment out below to remove both. JEL Codes only given if keywords also given.
-keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
-JELCodes: "L250 \\sep L100"
+#keywords: "Multivariate GARCH \\sep Kalman Filter \\sep Copula" # Use \\sep to separate
+#JELCodes: "L250 \\sep L100"
 
 # ----- Manage headers and footers:
 #BottomLFooter: $Title$
@@ -92,7 +92,7 @@ output:
     fig_width: 3.5 # Adjust default figure sizes. This can also be done in the chunks of the text.
     fig_height: 3.5
 abstract: |
-  Abstract to be written here. The abstract should not be too long and should provide the reader with a good understanding what you are writing about. Academic papers are not like novels where you keep the reader in suspense. To be effective in getting others to read your paper, be as open and concise about your findings here as possible. Ideally, upon reading your abstract, the reader should feel he / she must read your paper in entirety.
+  In this question I create optimal portfolios making use of Minimum Variance Optimization. I first construct a unconstrained portfolio and then compare it to the constrained portfolio. The constrained portfolio results in lower risk and lower return.  
 ---
 
 <!-- First: Set your default preferences for chunk options: -->
@@ -118,6 +118,321 @@ library(tidyverse)
 <!-- ############################## -->
 
 # Introduction \label{Introduction}
+
+In this question I dive into the realm of portfolio construction. To create an optimal portfolio I make use of the Minimum Variance Optimizer (MVO) which creates an optimal portfolio with the lowest possible variance. I construct an unconstrained and constrained portfolio using MVO. The resulting optimal portfolios are low risk low return portfolios which can be expected from using MVO. The constrained optimal portfolio results in lower risk and lower annualized monthly returns.
+
+## Laod relevant functions
+
+I load any function that I may have created so that I can use them in this code and analysis. 
+
+```{r}
+library(purrr)
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+```
+
+
+## Loading relevant data and packages
+
+Here I load the relevant data. 
+
+```{r}
+MAA <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/MAA.rds")
+
+msci <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/msci.rds")  %>% filter(Name %in% c("MSCI_ACWI", "MSCI_USA", "MSCI_RE", "MSCI_Jap"))
+
+```
+
+
+## Data preperation: Lets convert the price data to monthly returns data
+
+In this section I do some data perpetration. I take the original data of the MAA and msci and create a new column called Monthly_returns, which calculates the monthly returns from the daily data. I also filter for post 2010 and ensure that at least three years a data is available.
+
+### MAA monthly returns 
+
+Monthly returns for MAA are calculated after some fun wrangling.
+
+```{r}
+# Adding Year and Month columns without disturbing the original data
+MAA <- MAA %>%
+  mutate(
+    Year = year(date),
+    Month = month(date)
+  )
+
+# Calculating monthly returns..
+MAA <- MAA %>%
+  group_by(Ticker, Year, Month) %>%
+  arrange(date, .by_group = TRUE) %>%
+  summarize(
+    Monthly_Return = last(Price) / first(Price) - 1,
+    .groups = 'drop'
+  ) %>%
+  # Joining the calculated monthly returns with the original data
+  left_join(MAA, by = c("Ticker", "Year", "Month"))
+
+MAA <- MAA %>% 
+    filter(date > as.Date('2010-01-01')) %>% 
+    filter(date >= min(date) + years(3))
+```
+
+### msci monthly returns
+
+Monthly returns for msci are calculated after some fun wrangling.
+
+```{r}
+msci <- msci %>%
+  mutate(Year = year(date),Month = month(date))
+
+# Calculating monthly returns..
+msci <- msci %>%
+  group_by(Name, Year, Month) %>%
+  arrange(date, .by_group = TRUE) %>%
+  summarize(
+    Monthly_Return = last(Price) / first(Price) - 1,
+    .groups = 'drop'
+  ) %>%
+  # Joining the calculated monthly returns with the original data
+  left_join(msci, by = c("Name", "Year", "Month"))
+
+msci <- msci %>% 
+    filter(date > as.Date('2010-01-01')) %>% 
+    filter(date >= min(date) + years(3))
+```
+
+### Creating an asset class column in my data sets
+
+There are now four different asset classes in the MAA data set, namely, "Assian currency", "Credit", "Rates", "Commodity", "Equity", and "Real estate.
+
+```{r}
+#Using created function to add asset class to data sets
+MAA <- add_asset_class(MAA, asset_classes)
+msci <- add_asset_class(msci, asset_classes)
+```
+
+## Lets now attempt to construct the portfolio by making use of mean variance optimization: 
+
+I now make use of  ean VAriance Optimization to first create a unconstrained portfolio. I am then able to evaluate the risk and return of the unconstrained portfolio which I then compare to the constrained portfolio. 
+
+### Combine the Data Sets and compute some graphs
+
+Here I make use of a function I created that prepares and combines the relavant data. 
+
+```{r}
+combined_data <- prepare_and_combine(MAA, msci)
+```
+
+### Rolling 3 year annualzied returns comparison of asset classes
+
+TO insoect the data in question I run a plot that conatins the 3 year annualsied returns for each asset class. What is immidatley evident in this plot is that the equities asset class is the most volatile which also means the asset class that potentially holds the most risk. Outside of the equities asset class, the remaining asset classes are relatively similiar, with USD beinf the next most volatile. 
+
+```{r}
+#Calculating rolling return on a three year annualized basis
+combined_data <- combined_data %>% arrange(date) %>% 
+    group_by(Asset_Class) %>% 
+    mutate(Roll_rets = RcppRoll::roll_prod(1+ Monthly_Return, 36, fill = NA, align = "right")^(12/36) -1) %>%
+    group_by(date) %>%  
+    filter(any(!is.na(Roll_rets))) %>%  # Remove dates with no rolling returns
+    ungroup()
+
+#Now lets create the graph
+Asset_rolling_Comparisson_plot <- combined_data %>%    
+    
+    ggplot() + 
+  
+  geom_line(aes(date, Roll_rets, color = Asset_Class), size = 0.9, alpha = 0.7) + 
+  
+  fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(25),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = T) + 
+  
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "", y = "%", caption = "Note:\nCalculation own",
+       title = "Asset class rolling three year returns",
+       subtitle = "High volatility in equity in recent years")
+
+
+# Finplot for finishing touches easily:
+
+  fmxdat::finplot(Asset_rolling_Comparisson_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 years", )
+```
+
+### Boxplot of monthly returns by Asset class
+
+Here I make use of a function I create to obtain the boxplot for each asset class which illustrates the distribution of monthly returns for each asset class. The equity asset class as expected has the highest average monthly return but also contains alot of outliers which can be expected after seeing how volatile the returns of equity can be. The most stable asset classes seem to be the Asian currency and USD. This plot creates a nice illustration of the spread of monthly returns for each asset class. 
+
+```{r}
+Asset_Boxplot_Comparison <- create_asset_boxplot(combined_data)
+print(Asset_Boxplot_Comparison)
+
+```
+
+
+### Computing the returns matrix
+
+In order to using the Minimum Variance Optimizer I need to first craete a returns matrix, whicg contains the returns of each asset class in a matrix. TO do this I make use of a function that was crated in the practical. 
+
+```{r}
+#Calculating mean returns and covariance matrix
+# Reshape the data for covariance calculation
+return_mat_Quick <- combined_data %>%
+  select(date, Ticker, Monthly_Return) %>%
+  spread(key = Ticker, value = Monthly_Return)
+
+
+return_mat <- impute_missing_returns(return_mat_Quick, impute_returns_method = "NONE")
+```
+
+
+### Computing the simple covariance matrix
+
+Like that of the returns matrix one needs to create a simple covariance matrix to make use of MVO and be able to create an optimal portfolio. 
+
+```{r}
+# we need to drop the date columns for this
+return_mat_Nodate <- data.matrix(return_mat[, -1])
+
+# Simple Sample covariance and mean:
+Sigma <- RiskPortfolios::covEstimation(return_mat_Nodate)
+
+mu <- return_mat %>% summarise(across(-date, ~prod(1+.)^(1/n())-1)) %>% purrr::as_vector()
+
+```
+
+
+### Using Minimum variance optimization (MVO) for an unrestricted portfolio.
+
+Now using MVO I am able to construct an unconstrained optimal portfolio and evaluate the risk and returns. The risk will be evaluated by the standard deviation. 
+
+As can be seen from the table below, The optimal unconstrained portfolio has a standard deviation of 0.09827125 and an average annualized monthly retun of 0.02648242. Thus the portfolio has a very low standard deviation which is expected since the portfolio was constructed using MVO. Since the portfolio takes on low risk, it is not suprising to see that the return is also fairly low at 0.02648242. Thus, the unconstrained optimal portfolio using MVO is a low risk low return portfolio. 
+
+Lets now add the constraints in and then compare to this base portfolio. 
+
+
+```{r}
+mu_ann <- (1+mu)^(12)-1
+Sigma_ann <- Sigma * sqrt(12)
+N <- ncol(Sigma_ann)
+Imat <- rep(1, N)
+sigma_inv <- solve(Sigma_ann)
+
+mvp_weights_raw <- sigma_inv %*% Imat
+mvp_weights <- as.vector(mvp_weights_raw / sum(mvp_weights_raw))
+mvp_weights_df <- tibble(Tickers = rownames(mvp_weights_raw), minv_weights = mvp_weights)
+
+# The annualised return and SD for this portfolio follows:
+tibble(
+  average_ret_Ann = as.numeric(t(mvp_weights) %*% mu_ann),
+  volatility_Ann = as.numeric(sqrt(t(mvp_weights) %*% Sigma_ann %*% mvp_weights))*sqrt(252)
+)
+```
+
+### Now lets create the constrained optimised portfolio 
+
+With the specific constraints being:
+Apply Quarterly Rebalancing;
+- Limit exposure to Bonds and credit instruments at 25%;
+- Limit exposure to Equities at 60%;
+- Limit single asset exposure at 40%
+
+
+#### Lets first create some bond/credit and equity idicies that we can use for our constraints later
+
+Here I create the constraints that will be used to construct the constrained optimal portfolio. 
+
+
+```{r}
+
+#Creating the equity indices constraint 
+# Create a vector of unique asset tickers
+unique_assets <- unique(combined_data$Ticker)
+
+# Initialize a logical vector for equity indices
+equity_indices <- rep(FALSE, length(unique_assets))
+
+# Set TRUE for assets that are equities
+equity_assets <- combined_data %>%
+                  filter(Asset_Class == "Equity") %>%
+                  pull(Ticker) %>%
+                  unique()
+equity_indices[unique_assets %in% equity_assets] <- TRUE
+
+
+#Creating the bond_credit indices constraint
+# Initialize a logical vector for bond and credit indices
+bond_credit_indices <- rep(FALSE, length(unique_assets))
+
+# Set TRUE for assets that are bonds or credit instruments
+bond_credit_assets <- combined_data %>%
+                      filter(Asset_Class %in% c("Bonds", "Credit")) %>%
+                      pull(Ticker) %>%
+                      unique()
+bond_credit_indices[unique_assets %in% bond_credit_assets] <- TRUE
+
+
+
+
+```
+
+#Adding constraints to the optimisation problem and solving
+
+Solving for the constrained optimal portfolio is done using the CVXR package in R. 
+
+Lets now evaluate the constrained portfolio. The constrained optimal portfolio is an even lower risk and lower retun portfolio than that of the unconstrained portfolio created previously. The standard deviation is now at 0.0003147487 and the monthly annualised return is at 0.0003147487. Thus by adding the constrains to the portfolio we decrease the risk in the portfolio through decreased standard deviation, however, with decreased risk come decreased returns. Once again since we make use of MVO to create the optimal portfolio, it is not surprising that the optimal portfolio is a low risk low return optimal portfolio.
+
+
+```{r}
+pacman::p_load(knitr)
+pacman::p_load(CVXR)
+
+# Number of stocks
+NStox <- ncol(return_mat_Nodate)
+
+w <- Variable(NStox)
+ret <- t(mu) %*% w
+risk <- quad_form(w, Sigma)
+
+obj <- ret - risk
+
+# Constraints
+LB = 0.01  # Minimum weight
+UB = 0.40  # Maximum weight for a single asset
+equity_limit = 0.60  # Maximum weight for equity assets
+bond_credit_limit = 0.25 #maximum weight for bond/credit 
+
+# Constraint list
+constr <- list(w >= LB, w <= UB, sum(w) == 1, sum(w[equity_indices]) <= equity_limit, sum(w[equity_indices]) <= bond_credit_limit)
+
+# Optimization problem
+prob <- Problem(Maximize(obj), constr)
+
+# Solve the problem
+result <- solve(prob)
+
+# Extract the optimized weights
+optimized_weights <- result$getValue(w)
+optimized_weights
+
+result.CVXR <- tibble(stocks = unique_assets, weight = result$getValue(w) %>% as.vector())
+print(result.CVXR)
+
+result$getValue(risk)
+result$getValue(ret)
+
+
+# Create a data frame with the results
+results_df <- data.frame(
+  Metric = c("Annualized Return", "Annualized Risk"),
+  Value = c(result$getValue(ret), result$getValue(risk))
+)
+
+# Format the table
+kable(results_df, col.names = c("Metric", "Value"), caption = "Portfolio Performance Metrics")
+
+```
+
+
 
 \newpage
 

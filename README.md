@@ -9,8 +9,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 468991 25.1    1009781   54   660385 35.3
-    ## Vcells 875330  6.7    8388608   64  1769630 13.6
+    ## Ncells 469444 25.1    1011075   54   660385 35.3
+    ## Vcells 880263  6.8    8388608   64  1769630 13.6
 
 ``` r
 library(tidyverse)
@@ -53,6 +53,7 @@ library(RcppRoll)
 library(tbl2xts)
 library(fmxdat)
 library(rmsfuns)
+library(PerformanceAnalytics)
 ```
 
 ``` r
@@ -246,7 +247,349 @@ The active managers = The actice managers have on average an annualized
 return of 8.1%, this is fairly good but is lagging behind my fund at 21%
 and the benchmark at 14.43%.
 
-# Question 2
+# Question 2: Currency Hedging Analysis
+
+The purpose of the question is two fold. The first section of this
+question involves attempting to replicate the results shown in a study
+referring to, “currency hedging - and that there is a paradox in
+volatility in that negatively correlated assets may produce portfolio
+volatilities that are lower than the sum of its parts”. I am unable to
+fully replicate the findings of the study but i do however plot the
+scatter plots illustrating the relationship between the ZAR/US exchange
+rate and a hedged and unhedged portfolio following a portfolio structure
+of a 60/40 split between equities and bonds and a 70/30 split between
+global and local.
+
+The second part of this question I do my own analysis involving the
+portfolio above and study the volatility comparison of the hedged and
+unhedged portfolio\> In this section I illustrate how the hedged
+portfolio has far greater volatility than then unhedged portfolio. Thus,
+which leads the case for not applying long-term (systematic) currency
+hedging.
+
+## Loading relevant data
+
+The relevant data is data involves the monthly returns for, MSCI_ACWI,
+Bbg_Agg, J433, ALBI and the ZAR/USD exchange rate.
+
+``` r
+indexes <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/Cncy_Hedge_Assets.rds")
+
+ZAR <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/Monthly_zar.rds")
+```
+
+## Data preperation
+
+To prepare the data I first merge the monthly returns with the exchange
+rate data frame\> I then find that there are some NA’s present which I
+deal with accordingly. With respect to the NA’s present in the values
+column I fill with the last available value, Which I feel is the most
+appropriate manner to deal with the NA’s. I then also convert the capped
+SWIX(J433) and ALBI from ZAR to USD for ease of calculation.
+
+``` r
+# Merge the datasets on date
+hedging_data_merged <- left_join(indexes, ZAR, by = "date")
+
+#There are a few NA's in the value column of out merged data set which we need to fix
+# Fill NAs with the last available value
+hedging_data_merged <- hedging_data_merged %>%
+  fill(MSCI_ACWI, Bbg_Agg, J433, ALBI, value, .direction = "down")
+#This seems to have fixed our problem so we move on. 
+
+#There are also NA's in the tickers column which we need to fill
+# Replace NA in Tickers column with $ZAR.USD
+hedging_data_merged <- hedging_data_merged %>%
+  mutate(Tickers = replace_na(Tickers, "$ZAR.USD"))
+
+#Lets now convert the capped SWIX(J433) and ALBI from ZAR to USD for ease of calculation
+# Convert ZAR returns to USD
+hedging_data_merged$J433_USD <- hedging_data_merged$J433 * hedging_data_merged$value
+hedging_data_merged$ALBI_USD <- hedging_data_merged$ALBI * hedging_data_merged$value
+```
+
+## Lets now try create the portfolio
+
+### Portfolio weights
+
+I create the weights for the portfolio using the portfolio construction
+stated in the question. A 60/40 split between equity and bonds, and a
+70/30 split between local and global.
+
+``` r
+#Lets create the weights 
+weights <- c(MSCI_ACWI = 0.42, # 60% equity * 70% global
+             Bbg_Agg = 0.12,   # 40% bond * 30% global
+             J433 = 0.18,      # 60% equity * 30% local
+             ALBI = 0.28)      # 40% bond * 70% local
+```
+
+### Unhedged and hedged portfolio construction
+
+Here I calculate the returns of the hedged and unhedged portfolios by
+multiply the specific returns with the accompanying weight vector
+
+``` r
+hedging_data_merged <- hedging_data_merged %>%
+  rowwise() %>%
+  mutate(
+    portfolio_return_unhedged = sum(c_across(c(MSCI_ACWI, Bbg_Agg, J433, ALBI)) * weights),
+    portfolio_return_hedged = sum(c_across(c(MSCI_ACWI, Bbg_Agg, J433_USD, ALBI_USD)) * weights)
+  ) %>%
+  ungroup()
+```
+
+## Attempted Study replication
+
+Within this section of the question, I attempt to replicate the results
+of the study, although I am not able to fully replicate the paper, I am
+able to create some interesting scatter plots where I evaluate the
+relationship between the hedged and unhedged portfolios with the ZAR/USD
+exchange rate.
+
+### Unhedged scatter plot
+
+The unhedged scatter plot illustrates a slighty negative correlation
+between the ZAR/USD exchange rate and the unhedged portfolio return.
+This is inline with the findings of the study mentioned in the question.
+
+``` r
+# Scatter plot for Unhedged Portfolio vs ZAR
+replication_unhedged_plot <- ggplot(hedging_data_merged, aes(x = value, y = portfolio_return_unhedged)) +
+  geom_point() +
+  labs(title = "Scatter Plot: ZAR Value vs Unhedged Portfolio Return",
+       x = "ZAR Value",
+       y = "Unhedged Portfolio Return") +
+  theme_minimal()
+
+replication_unhedged_plot
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-12-1.png) \###
+Hedged scatterplot
+
+The findings of the hedged portfolio like that of the unhedged
+portfolio, find a negative relationship between the ZAR/USD exchange
+rate and the hedged portfolio returns. Which again is inline with the
+findings of the study mentioned in the question.
+
+``` r
+replication_hedged_plot <- ggplot(hedging_data_merged, aes(x = value, y = portfolio_return_hedged)) +
+  geom_point() +
+  labs(title = "Scatter Plot: ZAR Value vs hedged Portfolio Return",
+       x = "ZAR Value",
+       y = "hedged Portfolio Return") +
+  theme_minimal()
+
+replication_hedged_plot
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-13-1.png)
+
+From the analysis completed above it is evident that there is a case for
+not applying long-term (systematic) currency hedging to your portfolio.
+To further unpack this statement I dive into my own analysis.
+
+## Own study
+
+In this section of the question I dive into my own study. I evaluate a
+comparison between the volatility of a hedge vs unhedged portfolio.
+
+## Comparison of Hedged vs Unhedged Portfolio Returns
+
+TO start of this comparison I first run a line graph showing the returns
+of the hedged portfolio vs the returns of the unhedged portfolio. The
+results further strengthen the statements made prior that the hedged
+portfolio returns induce greater volatility than that of the unhedged
+portfolio. To further unpack this discussion on volatility comparison I
+use the PerformanceAnalytics package in R to fully evaluate the
+volatility of the portfolios in question.
+
+``` r
+pacman::p_load(fmxdat)
+
+hedging_comparison_plot <- hedging_data_merged %>%
+  ggplot(aes(x = date)) +
+  geom_line(aes(y = portfolio_return_unhedged, color = "Unhedged Portfolio"), size = 1) +
+  geom_line(aes(y = portfolio_return_hedged, color = "Hedged Portfolio"), size = 1)  +
+    
+  fmxdat::theme_fmx(title.size = ggpts(20), 
+            subtitle.size = ggpts(15),
+            caption.size = ggpts(12) )+
+  scale_color_manual(values = c("Unhedged Portfolio" = "blue", "Hedged Portfolio" = "orange")) +
+    
+    fmxdat::fmx_cols() + 
+    
+    labs(x = "", y = "%", caption = "Note:\nCalculation own",
+       title = "Comparison of Hedged vs Unhedged Portfolio Returns",
+       subtitle = "Tracking the Performance Over Time")
+```
+
+    ## Scale for colour is already present.
+    ## Adding another scale for colour, which will replace the existing scale.
+
+``` r
+#for finishing touches use finplot
+fmxdat::finplot(hedging_comparison_plot,x.vert = T, x.date.type = "%Y", x.date.dist = "1 years", )
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-14-1.png) \##
+Understanding the volatility of the hedged vs unhedged portfolios
+
+In this section I calculate the rolling volatility and plot the results
+for the hedged vs unhedged portfolios. To further the analysis I
+evaluate a rolling period of 1 year with one of 3 years.
+
+### Calculating the rolling volatility
+
+Using the performance analytics package in R I am able to calculate the
+1 year rolling volatility.
+
+``` r
+#loading the performance analytics package
+pacman::p_load(PerformanceAnalytics)
+pacman::p_load(TTR)
+pacman::p_load(tbl2xts)
+
+#The performance analytics package requires the data to be in xts format
+#I tried using the tbl2xts package here to convert to xts but for some reason I could not get it to work, I therefore had to find another way.
+hedging_xts_unhedged <- xts(hedging_data_merged$portfolio_return_unhedged, order.by = as.Date(hedging_data_merged$date))
+hedging_xts_hedged <- xts(hedging_data_merged$portfolio_return_hedged, order.by = as.Date(hedging_data_merged$date))
+
+
+# Calculate rolling volatility (standard deviation)
+roll_vol_unhedged <- runSD(hedging_xts_unhedged, n = 12) # Annualized
+
+
+roll_vol_hedged <- runSD(hedging_xts_hedged, n = 12) # Annualized
+```
+
+### Rolling Realized Volatility: Hedged vs Unhedged Portfolio plot
+
+Here I plot a comparison of the rolling 1 year realized volatility of
+the hedged vs unhedged portfolio using a line graph. As expected the
+hedged portfolio continues to be accompanied by higher volatility
+compared to that of the unhedged portfolio. To evaluate whether this is
+just the case with the 1 year rolling volatility I evaluate the 3 year
+rolling volatility next.
+
+``` r
+# Creating a combined dataframe for easy plotting
+# Since I could not get the tbl2xts package to work I had to find a new method to get my data out of the xts format to a nice data frame where I can now do some plots. 
+hedging_vol_data <- data.frame(
+  date = index(roll_vol_unhedged),
+  roll_vol_unhedged = as.numeric(roll_vol_unhedged),
+  roll_vol_hedged = as.numeric(roll_vol_hedged)
+)
+
+#Plotting
+
+ hedging_vol_data_plot <- hedging_vol_data %>%
+  ggplot() + 
+  geom_line(aes(date, roll_vol_unhedged, color = "Unhedged"), size = 2, alpha = 0.7) +
+  geom_line(aes(date, roll_vol_hedged, color = "Hedged"), size = 2, alpha = 0.7) +
+  
+  
+  fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(28),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = TRUE) + 
+  
+ 
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "", y = "Volatility", 
+       color = "Portfolio Type",
+       caption = "Note: Own calculation",
+       title = "Rolling Realized Volatility: Hedged vs Unhedged Portfolio",
+       subtitle = "Comparing the impact of hedging on portfolio volatility") 
+  
+  # Finishing touches
+  fmxdat::finplot(hedging_vol_data_plot, x.vert = TRUE, x.date.type = "%Y", x.date.dist = "1 years")
+```
+
+    ## Warning: Removed 11 rows containing missing values (`geom_line()`).
+    ## Removed 11 rows containing missing values (`geom_line()`).
+
+![](README_files/figure-markdown_github/unnamed-chunk-16-1.png) \## Lets
+now consider a longer rolling term of three years and evaluate its
+impact on valatility
+
+Now considering a longer rolling term of three years I evaluate whether
+the hedged portfolio still contains higher volatility compared to that
+of the unhedged portfolio.
+
+### Calculating rolling volatility using 36 months
+
+I calculate the 3 year rolling volatility for both the hedged and
+unhedged portfolios.
+
+``` r
+# Calculate rolling volatility (standard deviation)
+roll_vol_unhedged_36 <- runSD(hedging_xts_unhedged, n = 36)
+
+
+roll_vol_hedged_36 <- runSD(hedging_xts_hedged, n = 36) 
+```
+
+### 3 year rolling realized volatility: Hedged vs Unhedged Portfolio plot
+
+By utilizing the same methods as was used in calculating the 1 year
+rolling realized volatility I am able to calculate the three year
+rolling realized volatility and plot the results.
+
+Once again it is evident that the hedged portfolio contains higher
+volatility and therefore risk than that of the unhedged portfolio. The 3
+year rolling return results in lower volatility than that of the 1 year
+rolling volatility for the portfolios which can be expected due to
+increased time period.
+
+``` r
+# Creating a combined dataframe for easy plotting
+# Since I could not get the tbl2xts package to work I had to find a new method to get my data out of the xts format to a nice data frame where I can now do some plots. 
+hedging_vol_data_36 <- data.frame(
+  date = index(roll_vol_unhedged_36),
+  roll_vol_unhedged_36 = as.numeric(roll_vol_unhedged_36),
+  roll_vol_hedged_36 = as.numeric(roll_vol_hedged_36)
+)
+
+#Plotting
+
+ hedging_vol_data_plot_36 <- hedging_vol_data_36 %>%
+  ggplot() + 
+  geom_line(aes(date, roll_vol_unhedged_36, color = "Unhedged"), size = 2, alpha = 0.7) +
+  geom_line(aes(date, roll_vol_hedged_36, color = "Hedged"), size = 2, alpha = 0.7) +
+  
+  
+  fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(28),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = TRUE) + 
+  
+ 
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "", y = "Volatility", 
+       color = "Portfolio Type",
+       caption = "Note: Own calculation",
+       title = "3 year rolling Realized Volatility: Hedged vs Unhedged Portfolio",
+       subtitle = "Comparing the impact of hedging on portfolio volatility") 
+  
+  # Finishing touches
+  fmxdat::finplot(hedging_vol_data_plot_36, x.vert = TRUE, x.date.type = "%Y", x.date.dist = "1 years")
+```
+
+    ## Warning: Removed 35 rows containing missing values (`geom_line()`).
+    ## Removed 35 rows containing missing values (`geom_line()`).
+
+![](README_files/figure-markdown_github/unnamed-chunk-18-1.png)
+
+## Conclusion
+
+Thus, from the analysis completed above it is evident that the hedging
+your portfolio to reduce risk may not be the appropriate way at tackling
+risk. Hedging your portfolio may actually indice more volatility
+resulting in higher risk.
 
 # Question 3: Portfolio construction
 
@@ -370,7 +713,7 @@ cumulative_returns_port_plot <-    cumulative_returns_port %>%
 fmxdat::finplot(cumulative_returns_port_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 year")
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-21-1.png)
 
 As can be seen from the above graph, the cumulative returns for the ALSI
 and the SWIX were very similar until 2020, at which point the ALSI began
@@ -479,7 +822,7 @@ cumulative returns of the two portfolios differ.
  ALSI_sector_return_division$BOP.Weight  %>% .[endpoints(.,'months')] %>% chart.StackedBar()
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-12-1.png) \####
+![](README_files/figure-markdown_github/unnamed-chunk-23-1.png) \####
 The SWIX’s individual sectors weighted return contribution
 
 The plot below evaluates which sector(s) are the main weighted return
@@ -498,7 +841,7 @@ the financial sector.
  SWIX_sector_return_division$BOP.Weight  %>% .[endpoints(.,'months')] %>% chart.StackedBar()
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-13-1.png) \####
+![](README_files/figure-markdown_github/unnamed-chunk-24-1.png) \####
 Comparisson of the ALSI and SWIX portfolio contribution
 
 When evaluating the weighted contributions of the various sectors to the
@@ -670,7 +1013,7 @@ ggplot(combined_analysis, aes(x = cumulative_return, y = future_return, color = 
 
     ## Warning: Removed 119 rows containing missing values (`geom_point()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-21-1.png) As can
+![](README_files/figure-markdown_github/unnamed-chunk-32-1.png) As can
 be seen from the above graph, there does seem to be a positive
 correlation between past cumulative returns and future performance.
 However, not so straight forward, as there are some funds that had a
@@ -880,7 +1223,7 @@ ggplot(combined_analysis, aes(x = cumulative_return_10, y = future_return_10, co
 
     ## Warning: Removed 101 rows containing missing values (`geom_point()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-28-1.png) As can
+![](README_files/figure-markdown_github/unnamed-chunk-39-1.png) As can
 be seen from the above figure, there is a far greater variability when
 the look back period is increased to 10 years. More importantly there
 still seems to be a positive relationship between past cumulative
@@ -1017,16 +1360,31 @@ indicator at futrure performance.
 
 # Question 5
 
-# Question 6
+# Question 6: Portfolio Construction
 
-# Laod relevant functions
+## Introduction
+
+In this question I dive into the realm of portfolio construction. To
+create an optimal portfolio I make use of the Minimum Variance Optimizer
+(MVO) which creates an optimal portfolio with the lowest possible
+variance. I construct an unconstrained and constrained portfolio using
+MVO. The resulting optimal portfolios are low risk low return portfolios
+which can be expected from using MVO. The constrained optimal portfolio
+results in lower risk and lower annualized monthly returns.
+
+## Laod relevant functions
+
+I load any function that I may have created so that I can use them in
+this code and analysis.
 
 ``` r
 library(purrr)
 list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
 ```
 
-# Loading relevant data and packages
+## Loading relevant data and packages
+
+Here I load the relevant data.
 
 ``` r
 MAA <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/MAA.rds")
@@ -1034,13 +1392,16 @@ MAA <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/2
 msci <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/msci.rds")  %>% filter(Name %in% c("MSCI_ACWI", "MSCI_USA", "MSCI_RE", "MSCI_Jap"))
 ```
 
-# Data preperation: Lets convert the price data to monthly returns data
+## Data preperation: Lets convert the price data to monthly returns data
 
 In this section I do some data perpetration. I take the original data of
 the MAA and msci and create a new column called Monthly_returns, which
 calculates the monthly returns from the daily data. I also filter for
-post 2010 and ensure that at least three years a data is available. \##
-MAA monthly returns
+post 2010 and ensure that at least three years a data is available.
+
+### MAA monthly returns
+
+Monthly returns for MAA are calculated after some fun wrangling.
 
 ``` r
 # Adding Year and Month columns without disturbing the original data
@@ -1066,7 +1427,9 @@ MAA <- MAA %>%
     filter(date >= min(date) + years(3))
 ```
 
-## msci monthly returns
+### msci monthly returns
+
+Monthly returns for msci are calculated after some fun wrangling.
 
 ``` r
 msci <- msci %>%
@@ -1088,7 +1451,7 @@ msci <- msci %>%
     filter(date >= min(date) + years(3))
 ```
 
-## Creating an asset class column in my data sets
+### Creating an asset class column in my data sets
 
 There are now four different asset classes in the MAA data set, namely,
 “Assian currency”, “Credit”, “Rates”, “Commodity”, “Equity”, and “Real
@@ -1102,13 +1465,28 @@ msci <- add_asset_class(msci, asset_classes)
 
 ## Lets now attempt to construct the portfolio by making use of mean variance optimization:
 
+I now make use of ean VAriance Optimization to first create a
+unconstrained portfolio. I am then able to evaluate the risk and return
+of the unconstrained portfolio which I then compare to the constrained
+portfolio.
+
 ### Combine the Data Sets and compute some graphs
+
+Here I make use of a function I created that prepares and combines the
+relavant data.
 
 ``` r
 combined_data <- prepare_and_combine(MAA, msci)
 ```
 
 ### Rolling 3 year annualzied returns comparison of asset classes
+
+TO insoect the data in question I run a plot that conatins the 3 year
+annualsied returns for each asset class. What is immidatley evident in
+this plot is that the equities asset class is the most volatile which
+also means the asset class that potentially holds the most risk. Outside
+of the equities asset class, the remaining asset classes are relatively
+similiar, with USD beinf the next most volatile.
 
 ``` r
 #Calculating rolling return on a three year annualized basis
@@ -1145,17 +1523,31 @@ Asset_rolling_Comparisson_plot <- combined_data %>%
 
     ## Warning: Removed 102 rows containing missing values (`geom_line()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-37-1.png) \###
+![](README_files/figure-markdown_github/unnamed-chunk-48-1.png) \###
 Boxplot of monthly returns by Asset class
+
+Here I make use of a function I create to obtain the boxplot for each
+asset class which illustrates the distribution of monthly returns for
+each asset class. The equity asset class as expected has the highest
+average monthly return but also contains alot of outliers which can be
+expected after seeing how volatile the returns of equity can be. The
+most stable asset classes seem to be the Asian currency and USD. This
+plot creates a nice illustration of the spread of monthly returns for
+each asset class.
 
 ``` r
 Asset_Boxplot_Comparison <- create_asset_boxplot(combined_data)
 print(Asset_Boxplot_Comparison)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-38-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-49-1.png)
 
 ### Computing the returns matrix
+
+In order to using the Minimum Variance Optimizer I need to first craete
+a returns matrix, whicg contains the returns of each asset class in a
+matrix. TO do this I make use of a function that was crated in the
+practical.
 
 ``` r
 #Calculating mean returns and covariance matrix
@@ -1170,6 +1562,9 @@ return_mat <- impute_missing_returns(return_mat_Quick, impute_returns_method = "
 
 ### Computing the simple covariance matrix
 
+Like that of the returns matrix one needs to create a simple covariance
+matrix to make use of MVO and be able to create an optimal portfolio.
+
 ``` r
 # we need to drop the date columns for this
 return_mat_Nodate <- data.matrix(return_mat[, -1])
@@ -1180,7 +1575,22 @@ Sigma <- RiskPortfolios::covEstimation(return_mat_Nodate)
 mu <- return_mat %>% summarise(across(-date, ~prod(1+.)^(1/n())-1)) %>% purrr::as_vector()
 ```
 
-### USing Minimum variance optimization (MVO) for an unrestricted portfolio.
+### Using Minimum variance optimization (MVO) for an unrestricted portfolio.
+
+Now using MVO I am able to construct an unconstrained optimal portfolio
+and evaluate the risk and returns. The risk will be evaluated by the
+standard deviation.
+
+As can be seen from the table below, The optimal unconstrained portfolio
+has a standard deviation of 0.09827125 and an average annualized monthly
+retun of 0.02648242. Thus the portfolio has a very low standard
+deviation which is expected since the portfolio was constructed using
+MVO. Since the portfolio takes on low risk, it is not suprising to see
+that the return is also fairly low at 0.02648242. Thus, the
+unconstrained optimal portfolio using MVO is a low risk low return
+portfolio.
+
+Lets now add the constraints in and then compare to this base portfolio.
 
 ``` r
 mu_ann <- (1+mu)^(12)-1
@@ -1213,6 +1623,9 @@ to Equities at 60%; - Limit single asset exposure at 40%
 
 #### Lets first create some bond/credit and equity idicies that we can use for our constraints later
 
+Here I create the constraints that will be used to construct the
+constrained optimal portfolio.
+
 ``` r
 #Creating the equity indices constraint 
 # Create a vector of unique asset tickers
@@ -1243,26 +1656,23 @@ bond_credit_indices[unique_assets %in% bond_credit_assets] <- TRUE
 
 #Adding constraints to the optimisation problem and solving
 
-``` r
-library(CVXR)
-```
+Solving for the constrained optimal portfolio is done using the CVXR
+package in R.
 
-    ## 
-    ## Attaching package: 'CVXR'
-
-    ## The following object is masked from 'package:dplyr':
-    ## 
-    ##     id
-
-    ## The following object is masked from 'package:purrr':
-    ## 
-    ##     is_vector
-
-    ## The following object is masked from 'package:stats':
-    ## 
-    ##     power
+Lets now evaluate the constrained portfolio. The constrained optimal
+portfolio is an even lower risk and lower retun portfolio than that of
+the unconstrained portfolio created previously. The standard deviation
+is now at 0.0003147487 and the monthly annualised return is at
+0.0003147487. Thus by adding the constrains to the portfolio we decrease
+the risk in the portfolio through decreased standard deviation, however,
+with decreased risk come decreased returns. Once again since we make use
+of MVO to create the optimal portfolio, it is not surprising that the
+optimal portfolio is a low risk low return optimal portfolio.
 
 ``` r
+pacman::p_load(knitr)
+pacman::p_load(CVXR)
+
 # Number of stocks
 NStox <- ncol(return_mat_Nodate)
 
@@ -1340,3 +1750,21 @@ result$getValue(ret)
 ```
 
     ## [1] 0.005250953
+
+``` r
+# Create a data frame with the results
+results_df <- data.frame(
+  Metric = c("Annualized Return", "Annualized Risk"),
+  Value = c(result$getValue(ret), result$getValue(risk))
+)
+
+# Format the table
+kable(results_df, col.names = c("Metric", "Value"), caption = "Portfolio Performance Metrics")
+```
+
+| Metric            |     Value |
+|:------------------|----------:|
+| Annualized Return | 0.0052510 |
+| Annualized Risk   | 0.0003147 |
+
+Portfolio Performance Metrics
