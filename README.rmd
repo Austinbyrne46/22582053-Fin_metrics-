@@ -29,6 +29,16 @@ pacman::p_load(dplyr)
 library(gt)
 library(tidyverse)
 library(dplyr)
+library(lubridate)
+library(zoo)
+library(tidyr)
+library(tseries)
+library(PortfolioAnalytics)
+library(ggplot2)
+library(RcppRoll)
+library(tbl2xts)
+library(fmxdat)
+library(rmsfuns)
 ```
 
 
@@ -62,11 +72,9 @@ AI_Fund <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometri
 ```{r}
 #First loading the relevant packages 
 pacman::p_load("xts", "tidyverse", "tbl2xts", "PerformanceAnalytics", 
-    "lubridate", "glue", "RcppRoll")
+    "lubridate", "glue", "RcppRoll", "fmxdat")
 
 #Now I need to merge the ASISA, BM and AI_fund datasets to ensure comparative analysis is easier. 
-library(tidyverse)
-library(lubridate)
 
 # Renaming columns for ease
 names(AI_Fund)[2] <- "AI_Fund_Return"
@@ -88,11 +96,6 @@ head(final_merged_returns_data)
 
 #Now I can start calculating the rolling returns
 
-library(tidyverse)
-library(RcppRoll)
-library(fmxdat)
-
-
 # Prepare the data
 Rolling_returns_plot_df <- final_merged_returns_data %>%
   mutate(Rolling_Return_AI_Fund = RcppRoll::roll_mean(AI_Fund_Return, 12, fill = NA, align = "right"),
@@ -108,7 +111,7 @@ Rolling_returns_plot <- Rolling_returns_plot_df %>%
   geom_line(aes(date, Rolling_Return_BM, color = "Benchmark"), alpha = 0.7, size = 1.25) +
   geom_line(aes(date, Rolling_Return_ASISA, color = "ASISA"), alpha = 0.7, size = 1.25) +
   labs(title = "Rolling Returns: AI Fund vs Benchmark vs ASISA", x = "", y = "Rolling Return", caption = "Note: Rolling returns calculated over 12 months.") +
-  theme_fmx(title.size = ggpts(30), subtitle.size = ggpts(5), caption.size = ggpts(25), CustomCaption = T) +
+  fmxdat::theme_fmx(title.size = ggpts(30), subtitle.size = ggpts(5), caption.size = fmxdat::ggpts(25), CustomCaption = T) +
   fmx_cols()
 
 # Apply finplot
@@ -116,15 +119,19 @@ finplot(Rolling_returns_plot, x.date.dist = "1 year", x.date.type = "%Y", x.vert
 
 
 ```
+## Histogram plot for comarison of funds 
+
+```{r}
+
+histogram_plot <- create_histogram_plot_fund_vs_benchmark(final_merged_returns_data, c("AI_Fund_Return", "BM_Return", "ASISA_Return"))
+print(histogram_plot)
+
+```
+
+
 ## Making use of the PerformanceAnalytics package to do inference on the ASISA, BM and AI_Fund
 
 ```{r}
-library(tbl2xts)
-library(tidyverse)
-library(tidyr)
-library(dplyr)
-library(PerformanceAnalytics)
-
 #Dropping the Tickets column from the dataset
 
 final_merged_returns_data <- select(final_merged_returns_data, -Tickers)
@@ -147,6 +154,20 @@ xts_final_merged_returns_data <-final_merged_returns_data %>%
 ai_fund_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$AI_Fund_Return, scale = 252)
 bm_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$BM_Return, scale = 252)
 asisa_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$ASISA_Return, scale = 252)
+
+# Convert to data frames and add a fund identifier
+df_ai_fund <- as.data.frame(t(ai_fund_stats)) %>% mutate(Fund = "AI Fund")
+df_bm <- as.data.frame(t(bm_stats)) %>% mutate(Fund = "BM")
+df_asisa <- as.data.frame(t(asisa_stats)) %>% mutate(Fund = "ASISA")
+
+# Combine the data frames
+combined_stats <- bind_rows(df_ai_fund, df_bm, df_asisa)
+
+# Optional: rearrange columns so that 'Fund' is the first column
+combined_stats <- combined_stats %>% select(Fund, everything())
+
+# View the combined table
+print(combined_stats)
 ```
 
 My fund = My fund has a very high annual return of 21% which is higher than both the benchmark capped SWIX and the actively managed ASISA. My fund also has an extremely low standard deviation of 0.726% which means that my fund holds very little risk. Furthermore, the Sharpe ratio of 28.9 is extraordinarily high. 
@@ -154,51 +175,6 @@ My fund = My fund has a very high annual return of 21% which is higher than both
 The benchmark fund = The benchmark fund has very decent annual returns of 14.43%. Furthermore the benchmark as expected has a low annualized standard deviation of 0.69%. Thus, meaning the benchmark holds very little risk. Once again, the Sharpe ration of 19.52 is extraordinarily high. 
 
 The active managers = The actice managers have on average an annualized return of 8.1%, this is fairly good but is lagging behind my fund at 21% and the benchmark at 14.43%. 
-
-### Some more intresting stats 
-
-```{r}
-AI_Fund_all_stats <- table.DownsideRisk(xts_final_merged_returns_data$AI_Fund_Return)
-BM_all_stats <- table.DownsideRisk(xts_final_merged_returns_data$BM_Return)
-ASISA_all_stats <- table.DownsideRisk(xts_final_merged_returns_data$ASISA_Return)
-```
-
-
-### Some histogram plots
-
-```{r}
-
-# Add normal line and VaR estimates
-AI_Fund_histogram <- chart.Histogram(xts_final_merged_returns_data$AI_Fund_Return, 
-  methods = c("add.density", "add.normal", "add.risk"),
-  main = "Adding Value at Risk (95%)")
-
-
-BM_histogram <- chart.Histogram(xts_final_merged_returns_data$BM_Return, 
-  methods = c("add.density", "add.normal", "add.risk"),
-  main = "Adding Value at Risk (95%)")
-
-
-ASISA_histogram <- chart.Histogram(xts_final_merged_returns_data$ASISA_Return, 
-  methods = c("add.density", "add.normal", "add.risk"),
-  main = "Adding Value at Risk (95%)")
-
-```
-
-### Lets now look at a plot that looks at the drawdowns present in each fund, which will evaluate the risk involved in each. 
-
-```{r}
-AI_Fund_Drawdowns <- chart.Drawdown(xts_final_merged_returns_data$AI_Fund_Return,main = "Drawdowns: AI_Fund", 
-               col = "steelblue")
-
-BM_Drawdowns <- chart.Drawdown(xts_final_merged_returns_data$BM_Return,main = "Drawdowns: Benchmark", 
-               col = "steelblue")
-
-ASISA_Drawdowns <- chart.Drawdown(xts_final_merged_returns_data$ASISA_Return,main = "Drawdowns: ASISA", 
-               col = "steelblue")
-```
-
-AS can be seen from the above drawdowns plots, my AI_Fund and the benchmark follows a very similar risk to drawdowns. On the contrary ASISA (Which pertains to the active managers) contains heavier drawdowns. Thus the active managers contains higher risk than that of the benchmark fund (The market) and my fund 
 
 
 
@@ -760,6 +736,13 @@ For both the three year and ten year look back periods, past performance is not 
 
 # Question 6 
 
+# Laod relevant functions
+```{r}
+library(purrr)
+list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/code', full.names = T, recursive = T) %>% as.list() %>% walk(~source(.))
+```
+
+
 # Loading relevant data and packages
 
 ```{r}
@@ -767,9 +750,6 @@ MAA <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/2
 
 msci <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/msci.rds")  %>% filter(Name %in% c("MSCI_ACWI", "MSCI_USA", "MSCI_RE", "MSCI_Jap"))
 
-library(dplyr)
-library(lubridate)
-library(zoo)
 ```
 
 # Data preperation: Lets convert the price data to monthly returns data
@@ -777,9 +757,6 @@ library(zoo)
 In this section I do some data perpetration. I take the original data of the MAA and msci and create a new column called Monthly_returns, which calculates the monthly returns from the daily data. I also filter for post 2010 and ensure that at least three years a data is available. 
 ## MAA monthly returns 
 ```{r}
-library(dplyr)
-library(lubridate)
-
 # Adding Year and Month columns without disturbing the original data
 MAA <- MAA %>%
   mutate(
@@ -828,64 +805,16 @@ msci <- msci %>%
 
 There are now four different asset classes in the MAA data set, namely, "Assian currency", "Credit", "Rates", "Commodity", "Equity", and "Real estate.
 ```{r}
-asset_classes <- c(
-  "M2WD Index" = "Equity", 
-  "M2WO Index" = "Equity",
-  "M2EF Index" = "Equity",
-  "M2US Index" = "Equity",
-  "M8EU Index" = "Equity",
-  "M8JP Index" = "Equity",
-  "M1AP Index" = "Equity",
-  "LGAGTRUH Index" = "Rates",
-  "LUAGTRUU Index" = "Rates",
-  "LEATTREU Index" = "Rates",
-  "LGCPTRUH Index" = "Credit",
-  "LUACTRUU Index" = "Credit",
-  "LP05TREH Index" = "Credit",
-  "ADXY Index" = "Asian currency",
-  "DXY Index" = "USD",
-  "BCOMTR Index" = "Commodity",
-  "MSCI_RE" = "Real estate",
-  "MSCI_USREIT" = "Real estate",
-  "MSCI_ACWI" = "Equity", 
-  "MSCI_Jap" = "Equity", 
-  "MSCI_USA" = "Equity"
-)
-
-# Add a new column for asset class
-MAA <- MAA %>%
-  mutate(Asset_Class = asset_classes[Ticker])
-
-msci <- msci %>%
-  mutate(Asset_Class = asset_classes[Name])
-
-
-# Now MAA and msci data frames contain an Asset_Class column that categorizes each asset
-
+#Using created function to add asset class to data sets
+MAA <- add_asset_class(MAA, asset_classes)
+msci <- add_asset_class(msci, asset_classes)
 ```
 
 ## Lets now attempt to construct the portfolio by making use of mean variance optimization: 
 
 ### Combine the Data Sets and compute some graphs
 ```{r}
-library(dplyr)
-library(tidyr)
-library(tseries)
-library(PortfolioAnalytics)
-library(ggplot2)
-
-# Prepare MAA by selecting the relevant columns
-MAA_prepared <- MAA %>%
-  select(date,Ticker, Year, Month, Monthly_Return,Asset_Class)
-
-# Prepare msci by selecting the relevant columns
-# Assuming 'Name' in msci can be used as 'Ticker'
-msci_prepared <- msci %>%
-  select(date,Ticker = Name, Year, Month, Monthly_Return, Asset_Class)
-
-# Combine the two datasets
-combined_data <- rbind(MAA_prepared, msci_prepared)
-
+combined_data <- prepare_and_combine(MAA, msci)
 ```
 
 ### Rolling 3 year annualzied returns comparison of asset classes
@@ -922,87 +851,13 @@ Asset_rolling_Comparisson_plot <- combined_data %>%
 
   fmxdat::finplot(Asset_rolling_Comparisson_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 years", )
 ```
-### Correlation matrix heat map
+### Boxplot of monthly returns by Asset class
 ```{r}
-
+Asset_Boxplot_Comparison <- create_asset_boxplot(combined_data)
+print(Asset_Boxplot_Comparison)
 
 ```
 
-
-
-
-```{r}
-#Returns matrix creator function used from practicals
-impute_missing_returns <- function(return_mat, impute_returns_method = "NONE"){
-  # Make sure we have a date column called date:
-  if( !"date" %in% colnames(return_mat) ) stop("No 'date' column provided in return_mat. Try again please.")
-
-  # Note my use of 'any' below...
-  # Also note that I 'return' return_mat - which stops the function and returns return_mat.
-  if( impute_returns_method %in% c("NONE", "None", "none") ) {
-    if( any(is.na(return_mat)) ) warning("There are missing values in the return matrix.. Consider maybe using impute_returns_method = 'Drawn_Distribution_Own' / 'Drawn_Distribution_Collective'")
-    return(return_mat)
-  }
-
-
-  if( impute_returns_method  == "Average") {
-
-    return_mat <-
-      return_mat %>% gather(Stocks, Returns, -date) %>%
-      group_by(date) %>%
-      mutate(Avg = mean(Returns, na.rm=T)) %>%
-      mutate(Avg = coalesce(Avg, 0)) %>% # date with no returns - set avg to zero
-      ungroup() %>%
-      mutate(Returns = coalesce(Returns, Avg)) %>% select(-Avg) %>% spread(Stocks, Returns)
-
-    # That is just so much easier when tidy right? See how I gathered and spread again to give back a wide df?
-    return(return_mat)
-  } else
-
-    if( impute_returns_method  == "Drawn_Distribution_Own") {
-
-      N <- nrow(return_mat)
-      return_mat <-
-        # DIY: see what density function does
-        left_join(return_mat %>% gather(Stocks, Returns, -date),
-                  return_mat %>% gather(Stocks, Returns, -date) %>% group_by(Stocks) %>%
-                    mutate(Dens = list(density(Returns, na.rm=T))) %>%
-                    summarise(set.seed(as.numeric(format( Sys.time(), format = "%s"))/1e3*sample(1:100)[1]), Random_Draws = list(sample(Dens[[1]]$x, N, replace = TRUE, prob=.$Dens[[1]]$y))),
-                  by = "Stocks"
-        ) %>%  group_by(Stocks) %>%
-        # Random draw from sample:
-        mutate(Returns = coalesce(Returns, Random_Draws[[1]][row_number()])) %>%
-        select(-Random_Draws) %>% ungroup() %>% spread(Stocks, Returns)
-      return(return_mat)
-    } else
-
-      if( impute_returns_method  == "Drawn_Distribution_Collective") {
-        NAll <- nrow(return_mat %>% gather(Stocks, Returns, -date))
-        # DIY: see what density function does
-        return_mat <-
-          bind_cols(
-            return_mat %>% gather(Stocks, Returns, -date),
-            return_mat %>% gather(Stocks, Returns, -date) %>%
-              mutate(Dens = list(density(Returns, na.rm=T))) %>%
-              summarise(set.seed(as.numeric(format( Sys.time(), format = "%s"))/1e3*sample(1:100)[1]), Random_Draws = list(sample(Dens[[1]]$x, NAll, replace = TRUE, prob=.$Dens[[1]]$y))) %>%
-              unnest(Random_Draws)
-          ) %>%
-          mutate(Returns = coalesce(Returns, Random_Draws)) %>% select(-Random_Draws) %>% spread(Stocks, Returns)
-        return(return_mat)
-      } else
-
-        if( impute_returns_method  == "Zero") {
-          warning("This is probably not the best idea but who am I to judge....")
-          return_mat[is.na(return_mat)] <- 0
-          return(return_mat)
-        } else
-          stop("Please provide a valid impute_returns_method method. Options include:\n'Average', 'Drawn_Distribution_Own', 'Drawn_Distribution_Collective' and 'Zero'.")
-
-  return_mat
-
-}
-
-```
 
 ### Computing the returns matrix
 ```{r}
@@ -1029,9 +884,9 @@ mu <- return_mat %>% summarise(across(-date, ~prod(1+.)^(1/n())-1)) %>% purrr::a
 
 ```
 
-### USing Minimum variance optimization (MVO) for an uncapped portfolio. 
+### USing Minimum variance optimization (MVO) for an unrestricted portfolio. 
 ```{r}
-mu_ann <- (1+mu)^(252)-1
+mu_ann <- (1+mu)^(12)-1
 Sigma_ann <- Sigma * sqrt(12)
 N <- ncol(Sigma_ann)
 Imat <- rep(1, N)
@@ -1047,4 +902,88 @@ tibble(
   volatility_Ann = as.numeric(sqrt(t(mvp_weights) %*% Sigma_ann %*% mvp_weights))*sqrt(252)
 )
 ```
+### Now lets create the constrained optimised portfolio 
+
+With the specific constraints being:
+Apply Quarterly Rebalancing;
+- Limit exposure to Bonds and credit instruments at 25%;
+- Limit exposure to Equities at 60%;
+- Limit single asset exposure at 40%
+
+#### Lets first create some bond/credit and equity idicies that we can use for our constraints later
+```{r}
+
+#Creating the equity indices constraint 
+# Create a vector of unique asset tickers
+unique_assets <- unique(combined_data$Ticker)
+
+# Initialize a logical vector for equity indices
+equity_indices <- rep(FALSE, length(unique_assets))
+
+# Set TRUE for assets that are equities
+equity_assets <- combined_data %>%
+                  filter(Asset_Class == "Equity") %>%
+                  pull(Ticker) %>%
+                  unique()
+equity_indices[unique_assets %in% equity_assets] <- TRUE
+
+
+#Creating the bond_credit indices constraint
+# Initialize a logical vector for bond and credit indices
+bond_credit_indices <- rep(FALSE, length(unique_assets))
+
+# Set TRUE for assets that are bonds or credit instruments
+bond_credit_assets <- combined_data %>%
+                      filter(Asset_Class %in% c("Bonds", "Credit")) %>%
+                      pull(Ticker) %>%
+                      unique()
+bond_credit_indices[unique_assets %in% bond_credit_assets] <- TRUE
+
+
+
+
+```
+
+#Adding constraints to the optimisation problem and solving
+```{r}
+library(CVXR)
+
+# Number of stocks
+NStox <- ncol(return_mat_Nodate)
+
+w <- Variable(NStox)
+ret <- t(mu) %*% w
+risk <- quad_form(w, Sigma)
+
+obj <- ret - risk
+
+# Constraints
+LB = 0.01  # Minimum weight
+UB = 0.40  # Maximum weight for a single asset
+equity_limit = 0.60  # Maximum weight for equity assets
+bond_credit_limit = 0.25 #maximum weight for bond/credit 
+
+# Constraint list
+constr <- list(w >= LB, w <= UB, sum(w) == 1, sum(w[equity_indices]) <= equity_limit, sum(w[equity_indices]) <= bond_credit_limit)
+
+# Optimization problem
+prob <- Problem(Maximize(obj), constr)
+
+# Solve the problem
+result <- solve(prob)
+
+# Extract the optimized weights
+optimized_weights <- result$getValue(w)
+optimized_weights
+
+result.CVXR <- tibble(stocks = unique_assets, weight = result$getValue(w) %>% as.vector())
+print(result.CVXR)
+
+result$getValue(risk)
+result$getValue(ret)
+```
+
+
+
+
 
