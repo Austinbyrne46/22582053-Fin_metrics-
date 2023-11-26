@@ -39,6 +39,7 @@ library(RcppRoll)
 library(tbl2xts)
 library(fmxdat)
 library(rmsfuns)
+library(PerformanceAnalytics)
 ```
 
 
@@ -179,6 +180,207 @@ The active managers = The actice managers have on average an annualized return o
 
 
 # Question 2
+
+## Loading relevant data
+
+```{r}
+indexes <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/Cncy_Hedge_Assets.rds")
+
+ZAR <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/Monthly_zar.rds")
+```
+
+## Data preperation 
+
+```{r}
+# Merge the datasets on date
+hedging_data_merged <- left_join(indexes, ZAR, by = "date")
+
+#There are a few NA's in the value column of out merged data set which we need to fix
+# Fill NAs with the last available value
+hedging_data_merged <- hedging_data_merged %>%
+  fill(MSCI_ACWI, Bbg_Agg, J433, ALBI, value, .direction = "down")
+#This seems to have fixed our problem so we move on. 
+
+#There are also NA's in the tickers column which we need to fill
+# Replace NA in Tickers column with $ZAR.USD
+hedging_data_merged <- hedging_data_merged %>%
+  mutate(Tickers = replace_na(Tickers, "$ZAR.USD"))
+
+#Lets now convert the capped SWIX(J433) and ALBI from ZAR to USD for ease of calculation
+# Convert ZAR returns to USD
+hedging_data_merged$J433_USD <- hedging_data_merged$J433 * hedging_data_merged$value
+hedging_data_merged$ALBI_USD <- hedging_data_merged$ALBI * hedging_data_merged$value
+
+
+```
+
+## Lets now try create the portfolio 
+
+### Portfolio weights
+```{r}
+#Lets create the weights 
+weights <- c(MSCI_ACWI = 0.42, # 60% equity * 70% global
+             Bbg_Agg = 0.12,   # 40% bond * 30% global
+             J433 = 0.18,      # 60% equity * 30% local
+             ALBI = 0.28)      # 40% bond * 70% local
+```
+
+### Unhedged and hedged portfolio construction
+```{r}
+hedging_data_merged <- hedging_data_merged %>%
+  rowwise() %>%
+  mutate(
+    portfolio_return_unhedged = sum(c_across(c(MSCI_ACWI, Bbg_Agg, J433, ALBI)) * weights),
+    portfolio_return_hedged = sum(c_across(c(MSCI_ACWI, Bbg_Agg, J433_USD, ALBI_USD)) * weights)
+  ) %>%
+  ungroup()
+
+```
+
+## Comparison of Hedged vs Unhedged Portfolio Returns 
+
+```{r}
+pacman::p_load(fmxdat)
+
+hedging_comparison_plot <- hedging_data_merged %>%
+  ggplot(aes(x = date)) +
+  geom_line(aes(y = portfolio_return_unhedged, color = "Unhedged Portfolio"), size = 1) +
+  geom_line(aes(y = portfolio_return_hedged, color = "Hedged Portfolio"), size = 1)  +
+    
+  fmxdat::theme_fmx(title.size = ggpts(20), 
+            subtitle.size = ggpts(15),
+            caption.size = ggpts(12) )+
+  scale_color_manual(values = c("Unhedged Portfolio" = "blue", "Hedged Portfolio" = "orange")) +
+    
+    fmxdat::fmx_cols() + 
+    
+    labs(x = "", y = "%", caption = "Note:\nCalculation own",
+       title = "Comparison of Hedged vs Unhedged Portfolio Returns",
+       subtitle = "Tracking the Performance Over Time")
+
+#for finishing touches use finplot
+fmxdat::finplot(hedging_comparison_plot,x.vert = T, x.date.type = "%Y", x.date.dist = "1 years", )
+
+```
+## Understanding the volatility  of the hedged vs unhedged portfolios
+
+### Calculating the rolling volatility
+
+```{r}
+#loading the performance analytics package
+pacman::p_load(PerformanceAnalytics)
+pacman::p_load(TTR)
+pacman::p_load(tbl2xts)
+
+#The performance analytics package requires the data to be in xts format
+#I tried using the tbl2xts package here to convert to xts but for some reason I could not get it to work, I therefore had to find another way.
+hedging_xts_unhedged <- xts(hedging_data_merged$portfolio_return_unhedged, order.by = as.Date(hedging_data_merged$date))
+hedging_xts_hedged <- xts(hedging_data_merged$portfolio_return_hedged, order.by = as.Date(hedging_data_merged$date))
+
+
+# Calculate rolling volatility (standard deviation)
+roll_vol_unhedged <- runSD(hedging_xts_unhedged, n = 12) # Annualized
+
+
+roll_vol_hedged <- runSD(hedging_data_xts_hedged, n = 12) # Annualized
+
+```
+
+### Rolling Realized Volatility: Hedged vs Unhedged Portfolio plot
+
+```{r}
+# Creating a combined dataframe for easy plotting
+# Since I could not get the tbl2xts package to work I had to find a new method to get my data out of the xts format to a nice data frame where I can now do some plots. 
+hedging_vol_data <- data.frame(
+  date = index(roll_vol_unhedged),
+  roll_vol_unhedged = as.numeric(roll_vol_unhedged),
+  roll_vol_hedged = as.numeric(roll_vol_hedged)
+)
+
+#Plotting
+
+ hedging_vol_data_plot <- hedging_vol_data %>%
+  ggplot() + 
+  geom_line(aes(date, roll_vol_unhedged, color = "Unhedged"), size = 2, alpha = 0.7) +
+  geom_line(aes(date, roll_vol_hedged, color = "Hedged"), size = 2, alpha = 0.7) +
+  
+  
+  fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(28),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = TRUE) + 
+  
+ 
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "", y = "Volatility", 
+       color = "Portfolio Type",
+       caption = "Note: Own calculation",
+       title = "Rolling Realized Volatility: Hedged vs Unhedged Portfolio",
+       subtitle = "Comparing the impact of hedging on portfolio volatility") 
+  
+  # Finishing touches
+  fmxdat::finplot(hedging_vol_data_plot, x.vert = TRUE, x.date.type = "%Y", x.date.dist = "1 years")
+
+
+```
+## Lets now consider a longer rolling term of three years and evaluate its impact on valatility
+
+### Calculating rolling volatility using 36 months
+```{r}
+# Calculate rolling volatility (standard deviation)
+roll_vol_unhedged_36 <- runSD(hedging_xts_unhedged, n = 36)
+
+
+roll_vol_hedged_36 <- runSD(hedging_data_xts_hedged, n = 36) 
+```
+
+### 3 year rolling Realized Volatility: Hedged vs Unhedged Portfolio plot
+
+```{r}
+# Creating a combined dataframe for easy plotting
+# Since I could not get the tbl2xts package to work I had to find a new method to get my data out of the xts format to a nice data frame where I can now do some plots. 
+hedging_vol_data_36 <- data.frame(
+  date = index(roll_vol_unhedged_36),
+  roll_vol_unhedged_36 = as.numeric(roll_vol_unhedged_36),
+  roll_vol_hedged_36 = as.numeric(roll_vol_hedged_36)
+)
+
+#Plotting
+
+ hedging_vol_data_plot_36 <- hedging_vol_data_36 %>%
+  ggplot() + 
+  geom_line(aes(date, roll_vol_unhedged_36, color = "Unhedged"), size = 2, alpha = 0.7) +
+  geom_line(aes(date, roll_vol_hedged_36, color = "Hedged"), size = 2, alpha = 0.7) +
+  
+  
+  fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(28),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = TRUE) + 
+  
+ 
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "", y = "Volatility", 
+       color = "Portfolio Type",
+       caption = "Note: Own calculation",
+       title = "3 year rolling Realized Volatility: Hedged vs Unhedged Portfolio",
+       subtitle = "Comparing the impact of hedging on portfolio volatility") 
+  
+  # Finishing touches
+  fmxdat::finplot(hedging_vol_data_plot_36, x.vert = TRUE, x.date.type = "%Y", x.date.dist = "1 years")
+
+```
+
+
+
+
+
+
+
+
+
 
 
 
