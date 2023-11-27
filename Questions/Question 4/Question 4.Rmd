@@ -261,7 +261,7 @@ As can be seen from the above graph, there does seem to be a positive correlatio
 ### correlation analysis between cumulative past returns (3 years) and total flow
 
 ```{r}
-# Calculate Pearson's correlation coefficient
+# Calculate correlation coefficient
 correlation_result <- cor.test(combined_analysis$cumulative_return, combined_analysis$total_flow, method = "pearson")
 
 # Print the results
@@ -292,7 +292,7 @@ model <- lm(future_return ~ cumulative_return, data = combined_analysis)
 # Summary of the model
 summary(model)
 
-#Making the model tidy and formating nice
+#Making the model tidy and formatting nice
 # Tidy the model summary
 tidy_model <- tidy(model)
 
@@ -401,7 +401,7 @@ As can be seen from the above figure, there is a far greater variability when th
 ### correlation analysis between cumulative past returns (10 years) and total flow
 
 ```{r}
-# Calculate Pearson's correlation coefficient
+# Calculate correlation coefficient
 correlation_result_10 <- cor.test(combined_analysis$cumulative_return_10, combined_analysis$total_flow, method = "pearson")
 
 # Print the results
@@ -447,11 +447,11 @@ kable(tidy_model_10,
 
 ```
 
-From the above regression analysis the results provide some intresting analysis. Like that of the correlation analysis, the regression analysis states that there is a weak insignificant realtionship between past cumulative returns and future returns. Thus, even if a fund performs well for 10 years, this is not a solid indicator that the fund will perform well in the follwoing period. Furthermore, the regression analysis provides an extremily low r-squared value that suggests that past performance does not hold a significant explantion in the future returns of funds. 
+From the above regression analysis the results provide some interesting analysis. Like that of the correlation analysis, the regression analysis states that there is a weak insignificant relationship between past cumulative returns and future returns. Thus, even if a fund performs well for 10 years, this is not a solid indicator that the fund will perform well in the following period. Furthermore, the regression analysis provides an extremely low r-squared value that suggests that past performance does not hold a significant explanation in the future returns of funds. 
 
 ### Summary 
 
-For both the three year and ten year look back periods, past performance is not a good indicator at both fund flows and future performance. this suggests that when investors are looking to invest their money they look at other factors rather than just past performance, which according to our analysis is the right approach, as past performance is noot a good indicator at futrure performance. 
+For both the three year and ten year look back periods, past performance is not a good indicator at both fund flows and future performance. this suggests that when investors are looking to invest their money they look at other factors rather than just past performance, which according to our analysis is the right approach, as past performance is not a good indicator at future performance. 
 
 
 

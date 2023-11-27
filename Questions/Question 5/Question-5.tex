@@ -59,8 +59,7 @@
 \setlength{\parindent}{0cm}
 \setlength{\parskip}{1.3ex plus 0.5ex minus 0.3ex}
 \usepackage{textcomp}
-\renewcommand{\headrulewidth}{0.2pt}
-\renewcommand{\footrulewidth}{0.3pt}
+\renewcommand{\headrulewidth}{0pt}
 
 \usepackage{array}
 \newcolumntype{x}[1]{>{\centering\arraybackslash\hspace{0pt}}p{#1}}
@@ -164,57 +163,37 @@
 
 \begin{frontmatter}  %
 
-\title{Helping You Write Academic Papers in R using Texevier}
+\title{Question 5: Volatility and GARCH estimates}
 
 % Set to FALSE if wanting to remove title (for submission)
 
 
 
 
-\author[Add1]{Jane Doe\footnote{\textbf{Contributions:}
-  \newline \emph{The authors would like to thank no institution for
-  money donated to this project. Thank you sincerely.}}}
-\ead{nfkatzke@gmail.com}
-
-\author[Add1,Add2]{John Smith}
-\ead{John@gmail.com}
-
-\author[Add1,Add2]{John Doe}
-\ead{Joe@gmail.com}
+\author[Add1]{Austin Byrne}
+\ead{22582053@sun.ac.za}
 
 
 
-\address[Add1]{Some Institution, Cape Town, South Africa}
-\address[Add2]{Some other Institution, Cape Town, South Africa}
 
-\cortext[cor]{Corresponding author: Jane Doe\footnote{\textbf{Contributions:}
-  \newline \emph{The authors would like to thank no institution for
-  money donated to this project. Thank you sincerely.}}}
+
+\address[Add1]{Stellenbosch University, Western Cape}
+
 
 \begin{abstract}
 \small{
-Abstract to be written here. The abstract should not be too long and
-should provide the reader with a good understanding what you are writing
-about. Academic papers are not like novels where you keep the reader in
-suspense. To be effective in getting others to read your paper, be as
-open and concise about your findings here as possible. Ideally, upon
-reading your abstract, the reader should feel he / she must read your
-paper in entirety.
+This question is broken down into two sections, In section 1, I evaluate
+the statement that the rand has been one of the most volatile currencies
+in recent years. Tackling this question I calculate the standard
+deviation of nine currencies and compare. From the plots it is evident
+that the Rand is one of the most volatile in recent years. In the second
+section I attampt to tackle the problem using a GARCH model.
 }
 \end{abstract}
 
 \vspace{1cm}
 
 
-\begin{keyword}
-\footnotesize{
-Multivariate GARCH \sep Kalman Filter \sep Copula \\
-\vspace{0.3cm}
-}
-\footnotesize{
-\textit{JEL classification} L250 \sep L100
-}
-\end{keyword}
 
 
 
@@ -233,7 +212,7 @@ Multivariate GARCH \sep Kalman Filter \sep Copula \\
 \chead{}
 \rhead{}
 \lfoot{}
-\rfoot{\footnotesize Page \thepage}
+\rfoot{}
 \lhead{}
 %\rfoot{\footnotesize Page \thepage } % "e.g. Page 2"
 \cfoot{}
@@ -251,7 +230,98 @@ Multivariate GARCH \sep Kalman Filter \sep Copula \\
 \section{\texorpdfstring{Introduction
 \label{Introduction}}{Introduction }}\label{introduction}}
 
-\newpage
+In the first part of the question I analyze the statement that the Rand
+has been one of the most volatile stocks in recent years. For my
+analysis I find eight other currencies of which I can compare the
+volatility of the Rand to. The choice of which currencies to compare is
+base on historical performance. I first analyse the standard deviation
+of the currencies from prior 1990 to 2021. Over this long period it is
+not evident that the rand is one of the mos volatile. More specifically
+the questions states over recent years. Thus fr the next part of the
+analysis I shorten the time horizon to three years, comparing the
+volatility of the currencies in question to that of the Rand from 2018
+to 2021. Here it is more evident that the Rand is one of the most
+volatile currencies. However, the Rand is not drastically more volatile
+than the Singapore, Brazilian and Indian currencies.
+
+In the next section I dive into a GARCH model analysis. Unfortunetly I
+ran out of time to do this part of the question
+
+\hypertarget{loading-relvant-data-from-the-question}{%
+\subsection{Loading relvant data from the
+question}\label{loading-relvant-data-from-the-question}}
+
+\hypertarget{evaluating-the-volatility-of-the-rand-against-other-currencies}{%
+\subsection{Evaluating the volatility of the Rand against other
+currencies}\label{evaluating-the-volatility-of-the-rand-against-other-currencies}}
+
+In the first part of this question I need to comment on the statement
+that the Rand has been one of the most volatile currencies. To start
+this analysis I will first prepare the data available.
+
+\hypertarget{data-preperation}{%
+\subsubsection{Data preperation}\label{data-preperation}}
+
+For this section of the analysis I will be using the cncy data set which
+contains information on the currency values of 41 currencies. For the
+analysis it will an over whelming amount of information if I compare the
+ZAR to all of these currencies. I will therefore pick a few to do the
+comparison on. The way in which I will choose which currencies to
+compare the rand to is based of prior knowledge. I want to compare the
+rand to the historically most volatile currencies as well as the
+historically least volatile currencies and currencies that are
+historically moderately volatile.
+
+For the historically most volatile currencies I will be evaluating the
+Argentinian currency, the Turkish currency and the Brazilian currency.
+For the historically least volatile currencies I will be evaluating
+Singapore currency, the Canadian currency and the Australian currency.
+For the historically moderate currencies I will be evaluating Mexico and
+India.
+
+\hypertarget{volatility-comparison-plot-from-prior-1993-for-9-countries}{%
+\subsection{Volatility comparison plot from prior 1993 for 9
+countries}\label{volatility-comparison-plot-from-prior-1993-for-9-countries}}
+
+From the plot below it is not plainly evident that the South African
+currency is the most volatile. We are however, looking at a very large
+scale and the question pertains to recent years. Therefore to gain a
+better understanding of the volatility of the South African rand in
+recent years I will look at the last 3 years of standard deviation for
+each currency in question.
+
+\begin{figure}[H]
+
+{\centering \includegraphics{Question-5_files/figure-latex/Figure 1-1} 
+
+}
+
+\caption{Long term volatility comparison plot \label{Figure1}}\label{fig:Figure 1}
+\end{figure}
+
+\hypertarget{volatility-comparison-plot-over-last-3-years-for-9-countries}{%
+\subsection{Volatility comparison plot over last 3 years for 9
+countries}\label{volatility-comparison-plot-over-last-3-years-for-9-countries}}
+
+To gain a better understanding of the volatility of the Rand relative to
+its peers in the last few years I will be shorten the time horison
+inspected. The data ends in 2021. I will therefore look at the last 3
+years of standard deviation. More specifically, from 2018.
+
+From the more recent volatility plot comparison, the Rand does seem to
+be one of the more volatile currencies in our data set. However, it is
+not strikingly more volatile than Singapore, India or Brazil. Thus, to
+conclude, the Rand has been on eo fhte more volatile currencies in
+recent years.
+
+\begin{figure}[H]
+
+{\centering \includegraphics{Question-5_files/figure-latex/Figure 2-1} 
+
+}
+
+\caption{3 year volatility comparison plot \label{Figure2}}\label{fig:Figure 2}
+\end{figure}
 
 \hypertarget{references}{%
 \section*{References}\label{references}}

@@ -72,7 +72,7 @@ AI_Fund <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometri
 
 ## Rolling returns camparison
 
-Below I plot the 1 year rolling returns plots for my fund,  the benchmark and the active managers for compassion purposes. As can be seen by the comparison plot the active managers tend to lag just below that of the market except for times when the market drops. This is inline with what is expected. In times when the market is doing well, it is very tough for active managers to consistently obtain alpha and when add in fees they fall even further back. However, in times when the market is doing poorly and in a bear market active mangers can move their investments around to eliviate the loss found in the market. Interestingly, my fund follows the market fairly well and is at the most part obtaining rolling returns greater than that of the actively managed funds which provides good emphasis on strengthen of my fund of the active managers. 
+Below I plot the 1 year rolling returns plots for my fund,  the benchmark and the active managers for compassion purposes. As can be seen by the comparison plot the active managers tend to lag just below that of the market except for times when the market drops. This is inline with what is expected. In times when the market is doing well, it is very tough for active managers to consistently obtain alpha and when we add in fees they fall even further back. However, in times when the market is doing poorly and in a bear market active mangers can move their investments around to eliviate the loss found in the market. Interestingly, my fund follows the market fairly well and is at the most part obtaining rolling returns greater than that of the actively managed funds which provides good emphasis on the strength of my fund over that of the active managers. 
 
 ```{r}
 #First loading the relevant packages 
@@ -140,7 +140,7 @@ print(histogram_plot)
 Here I plan n using the performance analytics package in R to create some nice stats on the data. 
 
 ```{r}
-#Dropping the Tickets column from the dataset
+#Dropping the Tickers column from the dataset
 
 final_merged_returns_data <- select(final_merged_returns_data, -Tickers)
 
@@ -155,7 +155,7 @@ xts_final_merged_returns_data <-final_merged_returns_data %>%
 
 ### Some intresting stats
 
-The  stats found below, match the inference made from the previous two plots. My fund has the higest return, with next being the benchmrk and the lowest return coming from the actively managed funds. My fund as seen in the histogram plots has the highest standard deviation just above that of the market and as expected the actively managed fund has a relatively low standard deviation. 
+The stats found below, match the inference made from the previous two plots. My fund has the highest return, with next being the benchmark and the lowest return coming from the actively managed funds. My fund as seen in the histogram plots has the highest standard deviation just above that of the market and as expected the actively managed fund has a relatively low standard deviation. 
 
 ```{r}
 #Now that the merged returns data is in xts I can do some nice analysis 
@@ -165,7 +165,7 @@ ai_fund_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$AI_Fund_R
 bm_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$BM_Return, scale = 252)
 asisa_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$ASISA_Return, scale = 252)
 
-# Convert to data frames and add a fund identifier
+# Convert to data frames 
 df_ai_fund <- as.data.frame(t(ai_fund_stats)) %>% mutate(Fund = "AI Fund")
 df_bm <- as.data.frame(t(bm_stats)) %>% mutate(Fund = "BM")
 df_asisa <- as.data.frame(t(asisa_stats)) %>% mutate(Fund = "ASISA")
@@ -173,10 +173,9 @@ df_asisa <- as.data.frame(t(asisa_stats)) %>% mutate(Fund = "ASISA")
 # Combine the data frames
 combined_stats <- bind_rows(df_ai_fund, df_bm, df_asisa)
 
-# Optional: rearrange columns so that 'Fund' is the first column
 combined_stats <- combined_stats %>% select(Fund, everything())
 
-# View the combined table
+
 print(combined_stats)
 ```
 
@@ -192,9 +191,9 @@ The active managers have on average an annualized return of 8.1%, this is fairly
 
 The purpose of the question is two fold. The first section of this question involves attempting to replicate the results shown in a study referring to, "currency hedging - and that there is a
 paradox in volatility in that negatively correlated assets may produce portfolio volatilities that
-are lower than the sum of its parts". I am unable to fully replicate the findings of the study but i do however plot the scatter plots illustrating the relationship between the ZAR/US exchange rate and a hedged and unhedged portfolio following a portfolio structure of a 60/40 split between equities and bonds and a 70/30 split between global and local.  
+are lower than the sum of its parts". I am unable to fully replicate the findings of the study but I do however plot the scatter plots illustrating the relationship between the ZAR/US exchange rate and a hedged and unhedged portfolio following a portfolio structure of a 60/40 split between equities and bonds and a 70/30 split between global and local.  
 
-The second part of this question I do my own analysis involving the portfolio above and study the volatility comparison of the hedged and unhedged portfolio> In this section I illustrate how the hedged portfolio has far greater volatility than then unhedged portfolio. Thus, which leads the case for not applying long-term (systematic) currency hedging. 
+The second part of this question I do my own analysis involving the portfolio above and study the volatility comparison of the hedged and unhedged portfolio. In this section I illustrate how the hedged portfolio has far greater volatility than then unhedged portfolio.Which leads the case for not applying long-term (systematic) currency hedging. 
 
 ## Loading relevant data
 
@@ -208,7 +207,7 @@ ZAR <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/2
 
 ## Data preperation 
 
-To prepare the data I first merge the monthly returns with the exchange rate data frame> I then find that there are some NA's present which I deal with accordingly. With respect to the NA's present in the values column I fill with the last available value, Which I feel is the most appropriate manner to deal with the NA's. I then also convert the capped SWIX(J433) and ALBI from ZAR to USD for ease of calculation. 
+To prepare the data I first merge the monthly returns with the exchange rate data frame. I then find that there are some NA's present which I deal with accordingly. With respect to the NA's present in the values column I fill with the last available value, Which I feel is the most appropriate manner to deal with the NA's. I then also convert the capped SWIX(J433) and ALBI from ZAR to USD for ease of calculation. 
 
 ```{r}
 # Merge the datasets on date
@@ -302,11 +301,11 @@ From the analysis completed above it is evident that there is a case for not app
 
 ## Own study
 
-In this section of the question I dive into my own study. I evaluate a comparison between the volatility of a hedge vs unhedged portfolio. 
+In this section of the question I dive into my own study. I evaluate a comparison between the volatility of a hedged vs unhedged portfolio. 
 
 ## Comparison of Hedged vs Unhedged Portfolio Returns 
 
-TO start of this comparison I first run a line graph showing the returns of the hedged portfolio vs the returns of the unhedged portfolio. The results further strengthen the statements made prior that the hedged portfolio returns induce greater volatility than that of the unhedged portfolio. To further unpack this discussion on volatility comparison I use the PerformanceAnalytics package in R to fully evaluate the volatility of the portfolios in question. 
+To start off this comparison I first run a line graph showing the returns of the hedged portfolio vs the returns of the unhedged portfolio. The results further strengthen the statements made prior that the hedged portfolio returns induce greater volatility than that of the unhedged portfolio. To further unpack this discussion on volatility comparison I use the PerformanceAnalytics package in R to fully evaluate the volatility of the portfolios in question. 
 
 ```{r}
 pacman::p_load(fmxdat)
@@ -422,7 +421,7 @@ By utilizing the same methods as was used in calculating the 1 year rolling real
 Once again it is evident that the hedged portfolio contains higher volatility and therefore risk than that of the unhedged portfolio. The 3 year rolling return results in lower volatility than that of the 1 year rolling volatility for the portfolios which can be expected due to increased time period.
 
 ```{r}
-# Creating a combined dataframe for easy plotting
+# Creating a combined data frame for easy plotting
 # Since I could not get the tbl2xts package to work I had to find a new method to get my data out of the xts format to a nice data frame where I can now do some plots. 
 hedging_vol_data_36 <- data.frame(
   date = index(roll_vol_unhedged_36),
@@ -487,7 +486,7 @@ list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582
 
 ## Introduction
 
-Using the information on the ALSI (J203) and SWIX (J403) Indexes, I will be writing a short report where I will be comparing the specific methodologies used by the ALSI and the SWIX, evaluating the cumulative returns of each and plotting them together to perform a comparisson, evaluating which sectors hold the highest weight and contribution for each. 
+Using the information on the ALSI (J203) and SWIX (J403) Indexes, I will be writing a short report where I will be comparing the specific methodologies used by the ALSI and the SWIX, evaluating the cumulative returns of each and plotting them together to perform a comparison, evaluating which sectors hold the highest weight and contribution for each. 
 
 
 ## Lets create an ALSI and SWIX weighted poerfolio cumulative returns 
@@ -567,7 +566,7 @@ cumulative_returns_port_plot <-    cumulative_returns_port %>%
 fmxdat::finplot(cumulative_returns_port_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 year")
 ```
 
-As can be seen from the above graph, the cumulative returns for the ALSI and the SWIX were very similar until 2020, at which point the ALSI began outperforming the SWIX. Immediate prior to this separation in cumulative returns was a huge draw down for both the ALSI and SWIX weighted portfolios. Since this draw down is within 2020, a possible reason could be the COVID-19 pandemic. There may have been a switch in weights between the two portfolios which would result in varying returns. From the graph it is evident that the ALSI reacted better than the SWIX to this heavy draw down in 2020. 
+As can be seen from the above graph, the cumulative returns for the ALSI and the SWIX were very similar until 2020, at which point the ALSI began outperforming the SWIX. Immediately prior to this separation in cumulative returns was a huge draw down for both the ALSI and SWIX weighted portfolios. Since this draw down is within 2020, a possible reason could be the COVID-19 pandemic. There may have been a switch in weights between the two portfolios which would result in varying returns. From the graph it is evident that the ALSI reacted better than the SWIX to this heavy draw down in 2020. 
 
 To further this analysis I will dive into the weighted construction of the ALSI and SWIX portfolios, more precisely, I will be analyzing the weighted return contribution for each sector and evaluating the differences in the ALSI and SWIX. 
 
@@ -583,7 +582,7 @@ portfolio_returns <- ALSI %>%
     mutate(weighted_ALSI_ret = Return*J203) %>% 
     mutate(weighted_SWIX_ret = Return*J403)
 
-#In this section of code I am grouping by sector to then be able to calculate the weighted reuturn contribution of each sector in the respective ALSI and SWIX portfolios. I can then evaluate which sectors are the main drivers to portfolio returns. 
+#In this section of code I am grouping by sector to then be able to calculate the weighted return contribution of each sector in the respective ALSI and SWIX portfolios. I can then evaluate which sectors are the main drivers to portfolio returns. 
 portfolio_returns_with_total_sector_weights<-portfolio_returns %>% 
     arrange(date) %>% 
     group_by(date,Sector) %>% 
@@ -634,7 +633,7 @@ SWIX_sector_return_division <-
 
 #### The ALSI's individual sectors weighted return contribution
 
-Here we are able to evaluate which sector(s) are the main weighted return drivers of the ALSI weighted portfolio. From the plot below it is evident that for the last 10 years the majority of the return in the ALSI weighted portfolio has come from the Industrial sector and the lowest coming from the property/residual sectors. However, since 2016 the industrial sector has slowly started lossing its majority hold to an ever rising contribution from the resources sector. 
+Here we are able to evaluate which sector(s) are the main weighted return drivers of the ALSI weighted portfolio. From the plot below it is evident that for the last 10 years the majority of the return in the ALSI weighted portfolio has come from the Industrial sector and the lowest coming from the property/residual sectors. However, since 2016 the industrial sector has slowly started losing its majority hold to an ever rising contribution from the resources sector. 
 
 Next we are going to evaluate the same plot but for the SWIX weighted portfolio. We will then be able to do identify a possibility of why the cumulative returns of the two portfolios differ. 
 
@@ -653,15 +652,6 @@ The plot below evaluates which sector(s) are the main weighted return drivers of
 #### Comparisson of the ALSI and SWIX portfolio contribution
 
 When evaluating the weighted contributions of the various sectors to the ALSI and SWIX portfolios, there are some similarities but also some points of difference. Both portfolios have a large contribution from the industrial sector. Where the differences play a part is with respect to the financial a resources sectors. The ALSI obtains more weight from the resource sectors over that of the financial sector, while the SWIX obtains more of an even split between the two. This difference may be the contributing factor as to why the ALSI performed better than the SWIX since 2020. 
-
-
-## 5% capped portfolio
-
-```{r}
-
-
-
-```
 
 
 
@@ -814,7 +804,7 @@ As can be seen from the above graph, there does seem to be a positive correlatio
 ### correlation analysis between cumulative past returns (3 years) and total flow
 
 ```{r}
-# Calculate Pearson's correlation coefficient
+# Calculate correlation coefficient
 correlation_result <- cor.test(combined_analysis$cumulative_return, combined_analysis$total_flow, method = "pearson")
 
 # Print the results
@@ -845,7 +835,7 @@ model <- lm(future_return ~ cumulative_return, data = combined_analysis)
 # Summary of the model
 summary(model)
 
-#Making the model tidy and formating nice
+#Making the model tidy and formatting nice
 # Tidy the model summary
 tidy_model <- tidy(model)
 
@@ -976,7 +966,7 @@ kable(correlation_results_10_df,
 
 ```
 
-Like that of the 3 year look back period the correlation between past performance and funds flow is still weakly positive at 0.08. This is stronger than that of the three year look back period at 0.07 however it is not aas strong as I would have thought. Furthermore, the p-value has increased from 0.04 (for the 3 year look back period) to 0.08 which suggests that the results are not statistically significant at the 5% level. However, these results are still statistically significant at the 10% level. The main takeaway from this correlation analysis is that by increasing the look back period we have not increased the correlation between past fund performance and funds flow. 
+Like that of the 3 year look back period the correlation between past performance and funds flow is still weakly positive at 0.08. This is stronger than that of the three year look back period at 0.07 however it is not as strong as I would have thought. Furthermore, the p-value has increased from 0.04 (for the 3 year look back period) to 0.08 which suggests that the results are not statistically significant at the 5% level. However, these results are still statistically significant at the 10% level. The main takeaway from this correlation analysis is that by increasing the look back period we have not increased the correlation between past fund performance and funds flow. 
 
 Lets now have a look at the regression analysis for the 10 year look back period. 
 
@@ -989,7 +979,7 @@ model_10 <- lm(future_return_10 ~ cumulative_return_10, data = combined_analysis
 # Summary of the model
 summary(model_10)
 
-#Making the model tidy and formating nice
+#Making the model tidy and formatting nice
 # Tidy the model summary
 tidy_model_10 <- tidy(model_10)
 
@@ -1001,15 +991,121 @@ kable(tidy_model_10,
 
 ```
 
-From the above regression analysis the results provide some intresting analysis. Like that of the correlation analysis, the regression analysis states that there is a weak insignificant realtionship between past cumulative returns and future returns. Thus, even if a fund performs well for 10 years, this is not a solid indicator that the fund will perform well in the follwoing period. Furthermore, the regression analysis provides an extremily low r-squared value that suggests that past performance does not hold a significant explantion in the future returns of funds. 
+From the above regression analysis the results provide some interesting analysis. Like that of the correlation analysis, the regression analysis states that there is a weak insignificant relationship between past cumulative returns and future returns. Thus, even if a fund performs well for 10 years, this is not a solid indicator that the fund will perform well in the following period. Furthermore, the regression analysis provides an extremely low r-squared value that suggests that past performance does not hold a significant explanation in the future returns of funds. 
 
 ### Summary 
 
-For both the three year and ten year look back periods, past performance is not a good indicator at both fund flows and future performance. this suggests that when investors are looking to invest their money they look at other factors rather than just past performance, which according to our analysis is the right approach, as past performance is noot a good indicator at futrure performance. 
+For both the three year and ten year look back periods, past performance is not a good indicator at both fund flows and future performance. this suggests that when investors are looking to invest their money they look at other factors rather than just past performance, which according to our analysis is the right approach, as past performance is not a good indicator at future performance. 
 
-# Question 5 
+# Question 5: Volatility and GARCH estimates
 
 
+## Loading relvant data from the question
+
+```{r}
+cncy <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/currencies.rds")
+cncy_carry <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/cncy_Carry.rds")
+cncy_value <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/cncy_value.rds")
+cncyIV <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/cncyIV.rds")
+bbdxy <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/bbdxy.rds")
+```
+
+## Evaluating the volatility of the Rand against other currencies
+
+In the first part of this question I need to comment on the statement that the Rand has been one of the most volatile currencies. To start this analysis I will first prepare the data available.
+
+### Data preperation 
+
+For this section of the analysis I will be using the cncy data set which contains information on the currency values of 41 currencies. For the analysis it will an over whelming amount of information if I compare the ZAR to all of these currencies. I will therefore pick a few to do the comparison on. The way in which I will choose which currencies to compare the rand to is based of prior knowledge. I want to compare the rand to the historically most volatile currencies as well as the historically least volatile currencies and currencies that are historically moderately volatile. 
+
+For the historically most volatile currencies I will be evaluating the Argentinian currency, the Turkish currency and the Brazilian currency. For the historically least volatile currencies I will be evaluating Singapore currency, the Canadian currency and the Australian currency. For the historically moderate currencies I will be evaluating Mexico and India. 
+
+```{r}
+#Collecting the currencies that I want to evaluate into one vector
+comparison_countries <- c("Argentina_Cncy","Turkey_Cncy","Brazil_Cncy","Singapore_Cncy","Canada_Cncy","Australia_Cncy_Inv","Mexico_Cncy","India_Cncy", "SouthAfrica_Cncy")
+
+#Now lets filter our data to have a data frame with just these countries that I want to consider
+comparison_cncy <- cncy %>%  filter(Name %in% comparison_countries) 
+
+#Now lets clean up this data by removing the common "_cncy". 
+comparison_cncy <- comparison_cncy %>% 
+    mutate(Name = gsub( "_Cncy", "", Name)) 
+
+```
+
+## Volatility comparison plot from prior 1993 for 9 countries
+
+From the plot below it is not plainly evident that the South African currency is the most volatile. We are however, looking at a very large scale and the question pertains to recent years. Therefore to gain a better understanding of the volatility of the South African rand in recent years I will look at the last 3 years of standard deviation for each currency in question. 
+
+
+```{r}
+
+comparison_cncy <- comparison_cncy %>% 
+    arrange(date) %>% 
+    group_by(Name) %>% 
+    mutate(change = Price - lag(Price)) %>% 
+    filter(date > first(date)) %>%
+    mutate(SD = sqrt((change-mean(change))^2)) %>% 
+    ungroup()
+
+
+
+comparison_cncy_SD_plot <- comparison_cncy %>%   
+
+  ggplot() + 
+  
+   geom_line(aes(date, SD , color = Name), size = 0.5, alpha = 0.8) +
+    
+    facet_wrap(~Name, scales = "free_y")+
+  
+   fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(0),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = T) + 
+    
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "date", y = "%", caption = "Note:\nCalculation own",
+       title = "Standard deviation comparison plot",
+       subtitle = "")
+
+# Finplot for finishing touches:
+fmxdat::finplot(comparison_cncy_SD_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "5 years", darkcol = F)
+
+```
+## Volatility comparison plot over last 3 years for 9 countries
+
+To gain a better understanding of the volatility of the Rand relative to its peers in the last few years I will be shorten the time horison inspected. The data ends in 2021. I will therefore look at the last 3 years of standard deviation. More specifically, from 2018.  
+
+From the more recent volatility plot comparison, the Rand does seem to be one of the more volatile currencies in our data set. However, it is not strikingly more volatle than Singapore, India or Brazil. 
+
+```{r}
+shortened_comparison_cncy <- comparison_cncy %>% 
+    filter(date > lubridate::ymd(20180101))
+
+shortened_comparison_cncy_SD_plot <- shortened_comparison_cncy %>%   
+
+  ggplot() + 
+  
+   geom_line(aes(date, SD , color = Name), size = 0.5, alpha = 0.8) +
+    
+    facet_wrap(~Name, scales = "free_y")+
+  
+   fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(0),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = T) + 
+    
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "date", y = "%", caption = "Note:\nCalculation own",
+       title = "Standard deviation comparison plot",
+       subtitle = "")
+
+# Finplot for finishing touches:
+fmxdat::finplot(shortened_comparison_cncy_SD_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 years", darkcol = F)
+
+```
 
 
 # Question 6: Portfolio Construction  
@@ -1049,7 +1145,7 @@ In this section I do some data perpetration. I take the original data of the MAA
 Monthly returns for MAA are calculated after some fun wrangling.
 
 ```{r}
-# Adding Year and Month columns without disturbing the original data
+# Adding Year and Month columns 
 MAA <- MAA %>%
   mutate(
     Year = year(date),
@@ -1098,7 +1194,7 @@ msci <- msci %>%
 
 ### Creating an asset class column in my data sets
 
-There are now four different asset classes in the MAA data set, namely, "Assian currency", "Credit", "Rates", "Commodity", "Equity", and "Real estate.
+There are now four different asset classes in the MAA data set, namely, "Asian currency", "Credit", "Rates", "Commodity", "Equity", and "Real estate.
 
 ```{r}
 #Using created function to add asset class to data sets
@@ -1106,9 +1202,9 @@ MAA <- add_asset_class(MAA, asset_classes)
 msci <- add_asset_class(msci, asset_classes)
 ```
 
-## Lets now attempt to construct the portfolio by making use of mean variance optimization: 
+## Lets now attempt to construct the portfolio by making use of Minimum variance optimization: 
 
-I now make use of  ean VAriance Optimization to first create a unconstrained portfolio. I am then able to evaluate the risk and return of the unconstrained portfolio which I then compare to the constrained portfolio. 
+I now make use of  Minimum Variance Optimization to first create a unconstrained portfolio. I am then able to evaluate the risk and return of the unconstrained portfolio which I then compare to the constrained portfolio. 
 
 ### Combine the Data Sets and compute some graphs
 
@@ -1242,7 +1338,6 @@ unique_assets <- unique(combined_data$Ticker)
 # Initialize a logical vector for equity indices
 equity_indices <- rep(FALSE, length(unique_assets))
 
-# Set TRUE for assets that are equities
 equity_assets <- combined_data %>%
                   filter(Asset_Class == "Equity") %>%
                   pull(Ticker) %>%

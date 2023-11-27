@@ -273,15 +273,15 @@ Monthly returns for msci are calculated after some fun wrangling.
 sets}\label{creating-an-asset-class-column-in-my-data-sets}}
 
 There are now four different asset classes in the MAA data set, namely,
-``Assian currency'', ``Credit'', ``Rates'', ``Commodity'', ``Equity'',
+``Asian currency'', ``Credit'', ``Rates'', ``Commodity'', ``Equity'',
 and ``Real estate.
 
-\hypertarget{lets-now-attempt-to-construct-the-portfolio-by-making-use-of-mean-variance-optimization}{%
+\hypertarget{lets-now-attempt-to-construct-the-portfolio-by-making-use-of-minimum-variance-optimization}{%
 \subsection{Lets now attempt to construct the portfolio by making use of
-mean variance
-optimization:}\label{lets-now-attempt-to-construct-the-portfolio-by-making-use-of-mean-variance-optimization}}
+minimum variance
+optimization:}\label{lets-now-attempt-to-construct-the-portfolio-by-making-use-of-minimum-variance-optimization}}
 
-I now make use of ean VAriance Optimization to first create a
+I now make use of Minimum Variance Optimization to first create a
 unconstrained portfolio. I am then able to evaluate the risk and return
 of the unconstrained portfolio which I then compare to the constrained
 portfolio.
@@ -291,18 +291,18 @@ portfolio.
 graphs}\label{combine-the-data-sets-and-compute-some-graphs}}
 
 Here I make use of a function I created that prepares and combines the
-relavant data.
+relevant data.
 
 \hypertarget{rolling-3-year-annualzied-returns-comparison-of-asset-classes}{%
 \subsubsection{Rolling 3 year annualzied returns comparison of asset
 classes}\label{rolling-3-year-annualzied-returns-comparison-of-asset-classes}}
 
-TO insoect the data in question I run a plot that conatins the 3 year
-annualsied returns for each asset class. What is immidatley evident in
+TO inspect the data in question I run a plot that contains the 3 year
+annualized returns for each asset class. What is immediately evident in
 this plot is that the equities asset class is the most volatile which
 also means the asset class that potentially holds the most risk. Outside
 of the equities asset class, the remaining asset classes are relatively
-similiar, with USD beinf the next most volatile.
+similar, with USD being the next most volatile.
 
 \includegraphics{Question-6_files/figure-latex/unnamed-chunk-7-1.pdf}
 
@@ -310,10 +310,10 @@ similiar, with USD beinf the next most volatile.
 \subsubsection{Boxplot of monthly returns by Asset
 class}\label{boxplot-of-monthly-returns-by-asset-class}}
 
-Here I make use of a function I create to obtain the boxplot for each
+Here I make use of a function I create to obtain the box plot for each
 asset class which illustrates the distribution of monthly returns for
 each asset class. The equity asset class as expected has the highest
-average monthly return but also contains alot of outliers which can be
+average monthly return but also contains a lot of outliers which can be
 expected after seeing how volatile the returns of equity can be. The
 most stable asset classes seem to be the Asian currency and USD. This
 plot creates a nice illustration of the spread of monthly returns for
@@ -325,8 +325,8 @@ each asset class.
 \subsubsection{Computing the returns
 matrix}\label{computing-the-returns-matrix}}
 
-In order to using the Minimum Variance Optimizer I need to first craete
-a returns matrix, whicg contains the returns of each asset class in a
+In order to using the Minimum Variance Optimizer I need to first create
+a returns matrix, which contains the returns of each asset class in a
 matrix. TO do this I make use of a function that was crated in the
 practical.
 
@@ -348,9 +348,9 @@ standard deviation.
 
 As can be seen from the table below, The optimal unconstrained portfolio
 has a standard deviation of 0.09827125 and an average annualized monthly
-retun of 0.02648242. Thus the portfolio has a very low standard
+return of 0.02648242. Thus the portfolio has a very low standard
 deviation which is expected since the portfolio was constructed using
-MVO. Since the portfolio takes on low risk, it is not suprising to see
+MVO. Since the portfolio takes on low risk, it is not surprising to see
 that the return is also fairly low at 0.02648242. Thus, the
 unconstrained optimal portfolio using MVO is a low risk low return
 portfolio.

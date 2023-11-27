@@ -198,7 +198,7 @@ Within this section of the question, I attempt to replicate the results of the s
 
 ### Unhedged scatter plot 
 
-The unhedged scatter plot illustrates a slighty negative correlation between the ZAR/USD exchange rate and the unhedged portfolio return. This is inline with the findings of the study mentioned in the question. 
+The unhedged scatter plot illustrates a sightly negative correlation between the ZAR/USD exchange rate and the unhedged portfolio return. This is inline with the findings of the study mentioned in the question. 
 
 ```{r Figure 1, warning =  FALSE, fig.align = 'center', fig.cap = "Unhedged vs ZAR/USD scatter plot \\label{Figure1}", fig.height = 6, fig.width = 6, dev = 'png'}
 
@@ -396,7 +396,7 @@ hedging_vol_data_36 <- data.frame(
 
 ## Conclusion 
 
-Thus, from the analysis completed above it  is evident that the hedging your portfolio to reduce risk may not be the appropriate way at tackling risk. Hedging your portfolio may actually indice more volatility resulting in higher risk. 
+Thus, from the analysis completed above it  is evident that the hedging your portfolio to reduce risk may not be the appropriate way at tackling risk. Hedging your portfolio may actually induce more volatility resulting in higher risk. 
 
 
 

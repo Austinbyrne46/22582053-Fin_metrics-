@@ -152,14 +152,14 @@ In this section I do some data perpetration. I take the original data of the MAA
 Monthly returns for MAA are calculated after some fun wrangling.
 
 ```{r}
-# Adding Year and Month columns without disturbing the original data
+# Adding Year and Month columns 
 MAA <- MAA %>%
   mutate(
     Year = year(date),
     Month = month(date)
   )
 
-# Calculating monthly returns..
+# Calculating monthly returns
 MAA <- MAA %>%
   group_by(Ticker, Year, Month) %>%
   arrange(date, .by_group = TRUE) %>%
@@ -183,7 +183,7 @@ Monthly returns for msci are calculated after some fun wrangling.
 msci <- msci %>%
   mutate(Year = year(date),Month = month(date))
 
-# Calculating monthly returns..
+# Calculating monthly returns
 msci <- msci %>%
   group_by(Name, Year, Month) %>%
   arrange(date, .by_group = TRUE) %>%
@@ -201,7 +201,7 @@ msci <- msci %>%
 
 ### Creating an asset class column in my data sets
 
-There are now four different asset classes in the MAA data set, namely, "Assian currency", "Credit", "Rates", "Commodity", "Equity", and "Real estate.
+There are now four different asset classes in the MAA data set, namely, "Asian currency", "Credit", "Rates", "Commodity", "Equity", and "Real estate.
 
 ```{r}
 #Using created function to add asset class to data sets
@@ -209,13 +209,13 @@ MAA <- add_asset_class(MAA, asset_classes)
 msci <- add_asset_class(msci, asset_classes)
 ```
 
-## Lets now attempt to construct the portfolio by making use of mean variance optimization: 
+## Lets now attempt to construct the portfolio by making use of minimum variance optimization: 
 
-I now make use of  ean VAriance Optimization to first create a unconstrained portfolio. I am then able to evaluate the risk and return of the unconstrained portfolio which I then compare to the constrained portfolio. 
+I now make use of  Minimum Variance Optimization to first create a unconstrained portfolio. I am then able to evaluate the risk and return of the unconstrained portfolio which I then compare to the constrained portfolio. 
 
 ### Combine the Data Sets and compute some graphs
 
-Here I make use of a function I created that prepares and combines the relavant data. 
+Here I make use of a function I created that prepares and combines the relevant data. 
 
 ```{r}
 combined_data <- prepare_and_combine(MAA, msci)
@@ -223,7 +223,7 @@ combined_data <- prepare_and_combine(MAA, msci)
 
 ### Rolling 3 year annualzied returns comparison of asset classes
 
-TO insoect the data in question I run a plot that conatins the 3 year annualsied returns for each asset class. What is immidatley evident in this plot is that the equities asset class is the most volatile which also means the asset class that potentially holds the most risk. Outside of the equities asset class, the remaining asset classes are relatively similiar, with USD beinf the next most volatile. 
+TO inspect the data in question I run a plot that contains the 3 year annualized returns for each asset class. What is immediately evident in this plot is that the equities asset class is the most volatile which also means the asset class that potentially holds the most risk. Outside of the equities asset class, the remaining asset classes are relatively similar, with USD being the next most volatile. 
 
 ```{r}
 #Calculating rolling return on a three year annualized basis
@@ -260,7 +260,7 @@ Asset_rolling_Comparisson_plot <- combined_data %>%
 
 ### Boxplot of monthly returns by Asset class
 
-Here I make use of a function I create to obtain the boxplot for each asset class which illustrates the distribution of monthly returns for each asset class. The equity asset class as expected has the highest average monthly return but also contains alot of outliers which can be expected after seeing how volatile the returns of equity can be. The most stable asset classes seem to be the Asian currency and USD. This plot creates a nice illustration of the spread of monthly returns for each asset class. 
+Here I make use of a function I create to obtain the box plot for each asset class which illustrates the distribution of monthly returns for each asset class. The equity asset class as expected has the highest average monthly return but also contains a lot of outliers which can be expected after seeing how volatile the returns of equity can be. The most stable asset classes seem to be the Asian currency and USD. This plot creates a nice illustration of the spread of monthly returns for each asset class. 
 
 ```{r}
 Asset_Boxplot_Comparison <- create_asset_boxplot(combined_data)
@@ -271,7 +271,7 @@ print(Asset_Boxplot_Comparison)
 
 ### Computing the returns matrix
 
-In order to using the Minimum Variance Optimizer I need to first craete a returns matrix, whicg contains the returns of each asset class in a matrix. TO do this I make use of a function that was crated in the practical. 
+In order to using the Minimum Variance Optimizer I need to first create a returns matrix, which contains the returns of each asset class in a matrix. TO do this I make use of a function that was crated in the practical. 
 
 ```{r}
 #Calculating mean returns and covariance matrix
@@ -305,7 +305,7 @@ mu <- return_mat %>% summarise(across(-date, ~prod(1+.)^(1/n())-1)) %>% purrr::a
 
 Now using MVO I am able to construct an unconstrained optimal portfolio and evaluate the risk and returns. The risk will be evaluated by the standard deviation. 
 
-As can be seen from the table below, The optimal unconstrained portfolio has a standard deviation of 0.09827125 and an average annualized monthly retun of 0.02648242. Thus the portfolio has a very low standard deviation which is expected since the portfolio was constructed using MVO. Since the portfolio takes on low risk, it is not suprising to see that the return is also fairly low at 0.02648242. Thus, the unconstrained optimal portfolio using MVO is a low risk low return portfolio. 
+As can be seen from the table below, The optimal unconstrained portfolio has a standard deviation of 0.09827125 and an average annualized monthly return of 0.02648242. Thus the portfolio has a very low standard deviation which is expected since the portfolio was constructed using MVO. Since the portfolio takes on low risk, it is not surprising to see that the return is also fairly low at 0.02648242. Thus, the unconstrained optimal portfolio using MVO is a low risk low return portfolio. 
 
 Lets now add the constraints in and then compare to this base portfolio. 
 
@@ -321,7 +321,7 @@ mvp_weights_raw <- sigma_inv %*% Imat
 mvp_weights <- as.vector(mvp_weights_raw / sum(mvp_weights_raw))
 mvp_weights_df <- tibble(Tickers = rownames(mvp_weights_raw), minv_weights = mvp_weights)
 
-# The annualised return and SD for this portfolio follows:
+# The annualized return and SD for this portfolio follows:
 tibble(
   average_ret_Ann = as.numeric(t(mvp_weights) %*% mu_ann),
   volatility_Ann = as.numeric(sqrt(t(mvp_weights) %*% Sigma_ann %*% mvp_weights))*sqrt(252)
@@ -351,7 +351,7 @@ unique_assets <- unique(combined_data$Ticker)
 # Initialize a logical vector for equity indices
 equity_indices <- rep(FALSE, length(unique_assets))
 
-# Set TRUE for assets that are equities
+
 equity_assets <- combined_data %>%
                   filter(Asset_Class == "Equity") %>%
                   pull(Ticker) %>%
@@ -360,10 +360,10 @@ equity_indices[unique_assets %in% equity_assets] <- TRUE
 
 
 #Creating the bond_credit indices constraint
-# Initialize a logical vector for bond and credit indices
+
 bond_credit_indices <- rep(FALSE, length(unique_assets))
 
-# Set TRUE for assets that are bonds or credit instruments
+
 bond_credit_assets <- combined_data %>%
                       filter(Asset_Class %in% c("Bonds", "Credit")) %>%
                       pull(Ticker) %>%

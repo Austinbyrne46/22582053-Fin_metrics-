@@ -9,8 +9,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 469449 25.1    1011090   54   660385 35.3
-    ## Vcells 880809  6.8    8388608   64  1769830 13.6
+    ## Ncells 469565 25.1    1011421 54.1   660385 35.3
+    ## Vcells 882110  6.8    8388608 64.0  1769830 13.6
 
 ``` r
 library(tidyverse)
@@ -92,13 +92,14 @@ and the active managers for compassion purposes. As can be seen by the
 comparison plot the active managers tend to lag just below that of the
 market except for times when the market drops. This is inline with what
 is expected. In times when the market is doing well, it is very tough
-for active managers to consistently obtain alpha and when add in fees
+for active managers to consistently obtain alpha and when we add in fees
 they fall even further back. However, in times when the market is doing
 poorly and in a bear market active mangers can move their investments
 around to eliviate the loss found in the market. Interestingly, my fund
 follows the market fairly well and is at the most part obtaining rolling
 returns greater than that of the actively managed funds which provides
-good emphasis on strengthen of my fund of the active managers.
+good emphasis on the strength of my fund over that of the active
+managers.
 
 ``` r
 #First loading the relevant packages 
@@ -217,7 +218,7 @@ Here I plan n using the performance analytics package in R to create
 some nice stats on the data.
 
 ``` r
-#Dropping the Tickets column from the dataset
+#Dropping the Tickers column from the dataset
 
 final_merged_returns_data <- select(final_merged_returns_data, -Tickers)
 
@@ -232,7 +233,7 @@ xts_final_merged_returns_data <-final_merged_returns_data %>%
 ### Some intresting stats
 
 The stats found below, match the inference made from the previous two
-plots. My fund has the higest return, with next being the benchmrk and
+plots. My fund has the highest return, with next being the benchmark and
 the lowest return coming from the actively managed funds. My fund as
 seen in the histogram plots has the highest standard deviation just
 above that of the market and as expected the actively managed fund has a
@@ -246,7 +247,7 @@ ai_fund_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$AI_Fund_R
 bm_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$BM_Return, scale = 252)
 asisa_stats <- table.AnnualizedReturns(xts_final_merged_returns_data$ASISA_Return, scale = 252)
 
-# Convert to data frames and add a fund identifier
+# Convert to data frames 
 df_ai_fund <- as.data.frame(t(ai_fund_stats)) %>% mutate(Fund = "AI Fund")
 df_bm <- as.data.frame(t(bm_stats)) %>% mutate(Fund = "BM")
 df_asisa <- as.data.frame(t(asisa_stats)) %>% mutate(Fund = "ASISA")
@@ -254,10 +255,9 @@ df_asisa <- as.data.frame(t(asisa_stats)) %>% mutate(Fund = "ASISA")
 # Combine the data frames
 combined_stats <- bind_rows(df_ai_fund, df_bm, df_asisa)
 
-# Optional: rearrange columns so that 'Fund' is the first column
 combined_stats <- combined_stats %>% select(Fund, everything())
 
-# View the combined table
+
 print(combined_stats)
 ```
 
@@ -892,8 +892,6 @@ obtains more of an even split between the two. This difference may be
 the contributing factor as to why the ALSI performed better than the
 SWIX since 2020.
 
-## 5% capped portfolio
-
 # Question 4
 
 What is needed from me in this question: - Analyze if funds that have
@@ -1051,7 +1049,7 @@ ggplot(combined_analysis, aes(x = cumulative_return, y = future_return, color = 
 
     ## Warning: Removed 119 rows containing missing values (`geom_point()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-32-1.png) As can
+![](README_files/figure-markdown_github/unnamed-chunk-31-1.png) As can
 be seen from the above graph, there does seem to be a positive
 correlation between past cumulative returns and future performance.
 However, not so straight forward, as there are some funds that had a
@@ -1261,7 +1259,7 @@ ggplot(combined_analysis, aes(x = cumulative_return_10, y = future_return_10, co
 
     ## Warning: Removed 101 rows containing missing values (`geom_point()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-39-1.png) As can
+![](README_files/figure-markdown_github/unnamed-chunk-38-1.png) As can
 be seen from the above figure, there is a far greater variability when
 the look back period is increased to 10 years. More importantly there
 still seems to be a positive relationship between past cumulative
@@ -1396,7 +1394,138 @@ at other factors rather than just past performance, which according to
 our analysis is the right approach, as past performance is noot a good
 indicator at futrure performance.
 
-# Question 5
+# Question 5: Volatility and GARCH estimates
+
+## Loading relvant data from the question
+
+``` r
+cncy <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/currencies.rds")
+cncy_carry <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/cncy_Carry.rds")
+cncy_value <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/cncy_value.rds")
+cncyIV <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/cncyIV.rds")
+bbdxy <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582053 (Fin_metrics)/data/bbdxy.rds")
+```
+
+## Evaluating the volatility of the Rand against other currencies
+
+In the first part of this question I need to comment on the statement
+that the Rand has been one of the most volatile currencies. To start
+this analysis I will first prepare the data available.
+
+### Data preperation
+
+For this section of the analysis I will be using the cncy data set which
+contains information on the currency values of 41 currencies. For the
+analysis it will an over whelming amount of information if I compare the
+ZAR to all of these currencies. I will therefore pick a few to do the
+comparison on. The way in which I will choose which currencies to
+compare the rand to is based of prior knowledge. I want to compare the
+rand to the historically most volatile currencies as well as the
+historically least volatile currencies and currencies that are
+historically moderately volatile.
+
+For the historically most volatile currencies I will be evaluating the
+Argentinian currency, the Turkish currency and the Brazilian currency.
+For the historically least volatile currencies I will be evaluating
+Singapore currency, the Canadian currency and the Australian currency.
+For the historically moderate currencies I will be evaluating Mexico and
+India.
+
+``` r
+#Collecting the currency that I want to evaluate into one vector
+comparison_countries <- c("Argentina_Cncy","Turkey_Cncy","Brazil_Cncy","Singapore_Cncy","Canada_Cncy","Australia_Cncy_Inv","Mexico_Cncy","India_Cncy", "SouthAfrica_Cncy")
+
+#Now lets filter our data to have a data frame with just these countries that I want to consider
+comparison_cncy <- cncy |> filter(Name %in% comparison_countries) 
+
+#Now lets clean up this data by removing the common "_cncy". 
+comparison_cncy <- comparison_cncy %>% 
+    mutate(Name = gsub( "_Cncy", "", Name)) 
+```
+
+## Volatility comparison plot from prior 1993 for 9 countries
+
+From the plot below it is not plainly evident that the South African
+currency is the most volatile. We are however, looking at a very large
+scale and the question pertains to recent years. Therefore to gain a
+better understanding of the volatility of the South African rand in
+recent years I will look at the last 3 years of standard deviation for
+each currency in question.
+
+``` r
+comparison_cncy <- comparison_cncy %>% 
+    arrange(date) %>% 
+    group_by(Name) %>% 
+    mutate(change = Price - lag(Price)) %>% 
+    filter(date > first(date)) %>%
+    mutate(SD = sqrt((change-mean(change))^2)) %>% 
+    ungroup()
+
+
+
+comparison_cncy_SD_plot <- comparison_cncy |>  
+
+  ggplot() + 
+  
+   geom_line(aes(date, SD , color = Name), size = 0.5, alpha = 0.8) +
+    
+    facet_wrap(~Name, scales = "free_y")+
+  
+   fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(0),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = T) + 
+    
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "date", y = "%", caption = "Note:\nCalculation own",
+       title = "Standard deviation comparison plot",
+       subtitle = "")
+
+# Finplot for finishing touches:
+fmxdat::finplot(comparison_cncy_SD_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "5 years", darkcol = F)
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-43-1.png) \##
+Volatility comparison plot over last 3 years for 9 countries
+
+To gain a better understanding of the volatility of the Rand relative to
+its peers in the last few years I will be shorten the time horison
+inspected. The data ends in 2021. I will therefore look at the last 3
+years of standard deviation. More specifically, from 2018.
+
+From the more recent volatility plot comparison, the Rand does seem to
+be one of the more volatile currencies in our data set. However, it is
+not strikingly more volatle than Singapore, India or Brazil.
+
+``` r
+shortened_comparison_cncy <- comparison_cncy %>% 
+    filter(date > lubridate::ymd(20180101))
+
+shortened_comparison_cncy_SD_plot <- shortened_comparison_cncy |>  
+
+  ggplot() + 
+  
+   geom_line(aes(date, SD , color = Name), size = 0.5, alpha = 0.8) +
+    
+    facet_wrap(~Name, scales = "free_y")+
+  
+   fmxdat::theme_fmx(title.size = fmxdat::ggpts(30), 
+                    subtitle.size = fmxdat::ggpts(0),
+                    caption.size = fmxdat::ggpts(25),
+                    CustomCaption = T) + 
+    
+  fmxdat::fmx_cols() + 
+  
+  labs(x = "date", y = "%", caption = "Note:\nCalculation own",
+       title = "Standard deviation comparison plot",
+       subtitle = "")
+
+# Finplot for finishing touches:
+fmxdat::finplot(shortened_comparison_cncy_SD_plot, x.vert = T, x.date.type = "%Y", x.date.dist = "1 years", darkcol = F)
+```
+
+![](README_files/figure-markdown_github/unnamed-chunk-44-1.png)
 
 # Question 6: Portfolio Construction
 
@@ -1561,7 +1690,7 @@ Asset_rolling_Comparisson_plot <- combined_data %>%
 
     ## Warning: Removed 102 rows containing missing values (`geom_line()`).
 
-![](README_files/figure-markdown_github/unnamed-chunk-48-1.png) \###
+![](README_files/figure-markdown_github/unnamed-chunk-51-1.png) \###
 Boxplot of monthly returns by Asset class
 
 Here I make use of a function I create to obtain the boxplot for each
@@ -1578,7 +1707,7 @@ Asset_Boxplot_Comparison <- create_asset_boxplot(combined_data)
 print(Asset_Boxplot_Comparison)
 ```
 
-![](README_files/figure-markdown_github/unnamed-chunk-49-1.png)
+![](README_files/figure-markdown_github/unnamed-chunk-52-1.png)
 
 ### Computing the returns matrix
 
