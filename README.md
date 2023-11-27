@@ -1,7 +1,7 @@
 # Purpose
 
 This is the final README, it is a compilation of questions one through
-seven.
+six.
 
 ``` r
 rm(list = ls()) # Clean your environment:
@@ -9,8 +9,8 @@ gc() # garbage collection - It can be useful to call gc after a large object has
 ```
 
     ##          used (Mb) gc trigger (Mb) max used (Mb)
-    ## Ncells 469444 25.1    1011075   54   660385 35.3
-    ## Vcells 880263  6.8    8388608   64  1769630 13.6
+    ## Ncells 469449 25.1    1011090   54   660385 35.3
+    ## Vcells 880809  6.8    8388608   64  1769830 13.6
 
 ``` r
 library(tidyverse)
@@ -69,6 +69,10 @@ list.files('C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometrics/22582
 
 # Question 1: Systematic AI fund
 
+Here I am just loading in the relevant data that was provided in the
+question. It involves data on my fund, the benchmark (market) and the
+actively managed funds.
+
 ``` r
 #Loading relevant data for question 1
 library(tidyverse)
@@ -82,6 +86,19 @@ AI_Fund <- readRDS("C:/Users/austi/OneDrive/Desktop/Masters/Financial Econometri
 ```
 
 ## Rolling returns camparison
+
+Below I plot the 1 year rolling returns plots for my fund, the benchmark
+and the active managers for compassion purposes. As can be seen by the
+comparison plot the active managers tend to lag just below that of the
+market except for times when the market drops. This is inline with what
+is expected. In times when the market is doing well, it is very tough
+for active managers to consistently obtain alpha and when add in fees
+they fall even further back. However, in times when the market is doing
+poorly and in a bear market active mangers can move their investments
+around to eliviate the loss found in the market. Interestingly, my fund
+follows the market fairly well and is at the most part obtaining rolling
+returns greater than that of the actively managed funds which provides
+good emphasis on strengthen of my fund of the active managers.
 
 ``` r
 #First loading the relevant packages 
@@ -149,6 +166,7 @@ Rolling_returns_plot <- Rolling_returns_plot_df %>%
 
 ``` r
 # Apply finplot
+
 finplot(Rolling_returns_plot, x.date.dist = "1 year", x.date.type = "%Y", x.vert = T, y.pct = T, y.pct_acc = 1)
 ```
 
@@ -156,6 +174,17 @@ finplot(Rolling_returns_plot, x.date.dist = "1 year", x.date.type = "%Y", x.vert
 
 ![](README_files/figure-markdown_github/unnamed-chunk-4-1.png) \##
 Histogram plot for comarison of funds
+
+Below a create three histograms, with each one pertaining to the
+distribution of returns of either my fund, the market or the actively
+managed fund. What can be seen is that my fund has the highest average
+return which is slightly above the benchmark, with the actively manged
+funds having the lowest average return.The actively managed fund has the
+lowest spread of returns, which is what you would expect from an
+actively managed fund as these active managers tend to have a target
+they aim to hit consistently. What is concerning is that my fund has a
+fairly large spread, but it seems to match the market which could hint
+at my fund tracking the market fairly strongly.
 
 ``` r
 histogram_plot <- create_histogram_plot_fund_vs_benchmark(final_merged_returns_data, c("AI_Fund_Return", "BM_Return", "ASISA_Return"))
@@ -184,6 +213,9 @@ print(histogram_plot)
 
 ## Making use of the PerformanceAnalytics package to do inference on the ASISA, BM and AI_Fund
 
+Here I plan n using the performance analytics package in R to create
+some nice stats on the data.
+
 ``` r
 #Dropping the Tickets column from the dataset
 
@@ -198,6 +230,13 @@ xts_final_merged_returns_data <-final_merged_returns_data %>%
 ```
 
 ### Some intresting stats
+
+The stats found below, match the inference made from the previous two
+plots. My fund has the higest return, with next being the benchmrk and
+the lowest return coming from the actively managed funds. My fund as
+seen in the histogram plots has the highest standard deviation just
+above that of the market and as expected the actively managed fund has a
+relatively low standard deviation.
 
 ``` r
 #Now that the merged returns data is in xts I can do some nice analysis 
@@ -231,21 +270,20 @@ print(combined_stats)
     ## BM_Return                        19.5202
     ## ASISA_Return                     24.8296
 
-My fund = My fund has a very high annual return of 21% which is higher
-than both the benchmark capped SWIX and the actively managed ASISA. My
-fund also has an extremely low standard deviation of 0.726% which means
-that my fund holds very little risk. Furthermore, the Sharpe ratio of
-28.9 is extraordinarily high.
+My fund has a very high annual return of 21% which is higher than both
+the benchmark capped SWIX and the actively managed ASISA. My fund also
+has an extremely low standard deviation of 0.726% which means that my
+fund holds very little risk. Furthermore, the Sharpe ratio of 28.9 is
+extraordinarily high.
 
-The benchmark fund = The benchmark fund has very decent annual returns
-of 14.43%. Furthermore the benchmark as expected has a low annualized
-standard deviation of 0.69%. Thus, meaning the benchmark holds very
-little risk. Once again, the Sharpe ration of 19.52 is extraordinarily
-high.
+The benchmark fund has very decent annual returns of 14.43%. Furthermore
+the benchmark as expected has a low annualized standard deviation of
+0.69%. Thus, meaning the benchmark holds very little risk. Once again,
+the Sharpe ration of 19.52 is extraordinarily high.
 
-The active managers = The actice managers have on average an annualized
-return of 8.1%, this is fairly good but is lagging behind my fund at 21%
-and the benchmark at 14.43%.
+The active managers have on average an annualized return of 8.1%, this
+is fairly good but is lagging behind my fund at 21% and the benchmark at
+14.43%.
 
 # Question 2: Currency Hedging Analysis
 
